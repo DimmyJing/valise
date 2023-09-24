@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/DimmyJing/valise/attr"
-	"github.com/DimmyJing/valise/utils"
 	"github.com/sanity-io/litter"
 )
 
@@ -25,23 +24,8 @@ type Logger struct {
 	logger *slog.Logger
 }
 
-//nolint:gochecknoglobals
-var logger = New()
-
-func Default() *Logger {
-	return logger
-}
-
-func SetDefault(l *Logger) {
-	logger = l
-}
-
 func New(options ...Option) *Logger {
 	return &Logger{slog.New(NewHandler(options...))}
-}
-
-func With(args ...attr.Attr) *Logger {
-	return logger.With(args...)
 }
 
 func (l *Logger) Enabled(ctx context.Context, level Level) bool {
@@ -65,7 +49,6 @@ func (l *Logger) Trace(msg any, args ...attr.Attr) {
 }
 
 func (l *Logger) Tracef(msg string, args ...any) {
-	utils.EmulatePrintf(msg, args...)
 	l.log(context.Background(), LevelTrace, fmt.Sprintf(msg, args...), 0, nil)
 }
 
@@ -74,7 +57,6 @@ func (l *Logger) TraceContext(ctx context.Context, msg any, args ...attr.Attr) {
 }
 
 func (l *Logger) TracefContext(ctx context.Context, msg string, args ...any) {
-	utils.EmulatePrintf(msg, args...)
 	l.log(ctx, LevelTrace, fmt.Sprintf(msg, args...), 0, nil)
 }
 
@@ -83,7 +65,6 @@ func (l *Logger) Debug(msg any, args ...attr.Attr) {
 }
 
 func (l *Logger) Debugf(msg string, args ...any) {
-	utils.EmulatePrintf(msg, args...)
 	l.log(context.Background(), LevelDebug, fmt.Sprintf(msg, args...), 0, nil)
 }
 
@@ -92,7 +73,6 @@ func (l *Logger) DebugContext(ctx context.Context, msg any, args ...attr.Attr) {
 }
 
 func (l *Logger) DebugfContext(ctx context.Context, msg string, args ...any) {
-	utils.EmulatePrintf(msg, args...)
 	l.log(ctx, LevelDebug, fmt.Sprintf(msg, args...), 0, nil)
 }
 
@@ -101,7 +81,6 @@ func (l *Logger) Info(msg any, args ...attr.Attr) {
 }
 
 func (l *Logger) Infof(msg string, args ...any) {
-	utils.EmulatePrintf(msg, args...)
 	l.log(context.Background(), LevelInfo, fmt.Sprintf(msg, args...), 0, nil)
 }
 
@@ -110,7 +89,6 @@ func (l *Logger) InfoContext(ctx context.Context, msg any, args ...attr.Attr) {
 }
 
 func (l *Logger) InfofContext(ctx context.Context, msg string, args ...any) {
-	utils.EmulatePrintf(msg, args...)
 	l.log(ctx, LevelInfo, fmt.Sprintf(msg, args...), 0, nil)
 }
 
@@ -119,7 +97,6 @@ func (l *Logger) Warn(msg any, args ...attr.Attr) {
 }
 
 func (l *Logger) Warnf(msg string, args ...any) {
-	utils.EmulatePrintf(msg, args...)
 	l.log(context.Background(), LevelWarn, fmt.Sprintf(msg, args...), 0, nil)
 }
 
@@ -128,7 +105,6 @@ func (l *Logger) WarnContext(ctx context.Context, msg any, args ...attr.Attr) {
 }
 
 func (l *Logger) WarnfContext(ctx context.Context, msg string, args ...any) {
-	utils.EmulatePrintf(msg, args...)
 	l.log(ctx, LevelWarn, fmt.Sprintf(msg, args...), 0, nil)
 }
 
@@ -137,7 +113,6 @@ func (l *Logger) Error(msg any, args ...attr.Attr) {
 }
 
 func (l *Logger) Errorf(msg string, args ...any) {
-	utils.EmulatePrintf(msg, args...)
 	l.log(context.Background(), LevelError, fmt.Sprintf(msg, args...), 0, nil)
 }
 
@@ -146,7 +121,6 @@ func (l *Logger) ErrorContext(ctx context.Context, msg any, args ...attr.Attr) {
 }
 
 func (l *Logger) ErrorfContext(ctx context.Context, msg string, args ...any) {
-	utils.EmulatePrintf(msg, args...)
 	l.log(ctx, LevelError, fmt.Sprintf(msg, args...), 0, nil)
 }
 
@@ -155,7 +129,6 @@ func (l *Logger) Fatal(msg any, args ...attr.Attr) {
 }
 
 func (l *Logger) Fatalf(msg string, args ...any) {
-	utils.EmulatePrintf(msg, args...)
 	l.log(context.Background(), LevelFatal, fmt.Sprintf(msg, args...), 0, nil)
 }
 
@@ -164,7 +137,6 @@ func (l *Logger) FatalContext(ctx context.Context, msg any, args ...attr.Attr) {
 }
 
 func (l *Logger) FatalfContext(ctx context.Context, msg string, args ...any) {
-	utils.EmulatePrintf(msg, args...)
 	l.log(ctx, LevelFatal, fmt.Sprintf(msg, args...), 0, nil)
 }
 
@@ -174,7 +146,6 @@ func (l *Logger) Panic(err error, args ...attr.Attr) {
 }
 
 func (l *Logger) Panicf(msg string, args ...any) {
-	utils.EmulateErrorf(msg, args...)
 	//nolint:goerr113
 	err := fmt.Errorf(msg, args...)
 	l.log(context.Background(), LevelFatal, err, 0, nil)
@@ -187,7 +158,6 @@ func (l *Logger) PanicContext(ctx context.Context, err error, args ...attr.Attr)
 }
 
 func (l *Logger) PanicfContext(ctx context.Context, msg string, args ...any) {
-	utils.EmulateErrorf(msg, args...)
 	//nolint:goerr113
 	err := fmt.Errorf(msg, args...)
 	l.log(ctx, LevelFatal, err, 0, nil)

@@ -29,20 +29,6 @@ func TestSetLitter(t *testing.T) { //nolint:paralleltest
 	})
 }
 
-func TestDefaultLogger(t *testing.T) { //nolint:paralleltest
-	logger, buf := getLogger(log.WithCharm())
-	log.SetDefault(logger)
-	log.Default().Error("testdefault")
-	log.With(attr.String("key", "testwith")).Warn("")
-
-	bufStr := buf.String()
-
-	assert.Contains(t, bufStr, "ERRO")
-	assert.Contains(t, bufStr, "testdefault")
-	assert.Contains(t, bufStr, "WARN")
-	assert.Contains(t, bufStr, "testwith")
-}
-
 func TestLoggerEnabled(t *testing.T) {
 	t.Parallel()
 
