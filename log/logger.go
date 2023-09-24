@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"runtime"
+	"time"
 
 	"github.com/DimmyJing/valise/attr"
 	"github.com/DimmyJing/valise/utils"
@@ -170,10 +172,20 @@ func (l *Logger) Log(ctx context.Context, level Level, msg any, args ...attr.Att
 	l.log(ctx, level, msg, args)
 }
 
+const numSkipFrames = 3
+
 func (l *Logger) log(ctx context.Context, level Level, msg any, args []attr.Attr) {
+	var message string
 	if val, ok := msg.(string); ok {
-		l.logger.LogAttrs(ctx, slog.Level(level), val, args...)
+		message = val
 	} else {
-		l.logger.LogAttrs(ctx, slog.Level(level), lit.Sdump(msg), args...)
+		message = lit.Sdump(msg)
 	}
+
+	var pcs [1]uintptr
+
+	runtime.Callers(numSkipFrames, pcs[:])
+	r := slog.NewRecord(time.Now(), slog.Level(level), message, pcs[0])
+	r.AddAttrs(args...)
+	l.logger.Handler().Handle(ctx, r)
 }
