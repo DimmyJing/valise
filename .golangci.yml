@@ -1,0 +1,27 @@
+linters:
+  enable-all: true
+  disable:
+    # deprecated
+    - deadcode
+    - exhaustivestruct
+    - golint
+    - ifshort
+    - interfacer
+    - maligned
+    - nosnakecase
+    - scopelint
+    - structcheck
+    - varcheck
+
+    # doesn't work with vim
+    - gofumpt
+    - gci
+
+    # misc
+    - depguard
+    - godox
+linters-settings:
+  revive:
+    rules:
+      - name: unexported-return
+        disabled: true
