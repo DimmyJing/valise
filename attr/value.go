@@ -51,17 +51,8 @@ func AnyValue(val any) Value {
 	return slog.AnyValue(val)
 }
 
-const maxLogValues = 100
-
 func ToAny(val Value) any {
-	newVal := val.Any()
-	for i := 0; i < maxLogValues; i++ {
-		if logValuer, ok := newVal.(LogValuer); ok {
-			newVal = logValuer.LogValue().Any()
-		} else {
-			break
-		}
-	}
+	newVal := val.Resolve().Any()
 
 	if group, ok := newVal.([]Attr); ok {
 		res := make(map[string]any)
