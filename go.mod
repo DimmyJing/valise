@@ -1,10 +1,8 @@
-module github.com/DimmyJing/valise/log
+module github.com/DimmyJing/valise
 
 go 1.21.0
 
 require (
-	github.com/DimmyJing/valise/attr v0.1.0
-	github.com/DimmyJing/valise/utils v0.1.0
 	github.com/charmbracelet/log v0.2.4
 	github.com/sanity-io/litter v1.5.5
 	github.com/stretchr/testify v1.8.4

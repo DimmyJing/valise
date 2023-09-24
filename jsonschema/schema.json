@@ -15,6 +15,7 @@
 				"type": {
 					"oneOf": [
 						{
+							"type": "string",
 							"enum": [
 								"null",
 								"boolean",
@@ -28,6 +29,7 @@
 						{
 							"type": "array",
 							"items": {
+								"type": "string",
 								"enum": [
 									"null",
 									"boolean",
@@ -48,9 +50,7 @@
 					"minItems": 1,
 					"uniqueItems": true
 				},
-				"const": {
-					"$ref": "#/$defs/schema"
-				},
+				"const": {},
 				"multipleOf": {
 					"type": "number",
 					"exclusiveMinimum": 0
@@ -132,21 +132,18 @@
 					}
 				},
 				"format": {
+					"type": "string",
 					"enum": [
 						"date-time",
 						"date",
 						"time",
 						"duration",
 						"email",
-						"idn-email",
 						"hostname",
-						"idn-hostname",
 						"ipv4",
 						"ipv6",
 						"uri",
 						"uri-reference",
-						"iri",
-						"iri-reference",
 						"uuid",
 						"json-pointer",
 						"relative-json-pointer",
