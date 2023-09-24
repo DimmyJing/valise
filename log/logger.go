@@ -168,8 +168,14 @@ func (l *Logger) Log(ctx context.Context, level Level, msg any, args ...attr.Att
 	l.log(ctx, level, msg, 0, args)
 }
 
-func (l *Logger) LogHelper(ctx context.Context, level Level, msg any, args ...attr.Attr) {
-	l.log(ctx, level, msg, 1, args)
+func (l *Logger) LogHelper(
+	ctx context.Context,
+	level Level,
+	msg any,
+	skips int,
+	args ...attr.Attr,
+) {
+	l.log(ctx, level, msg, skips+1, args)
 }
 
 const numSkipFrames = 3

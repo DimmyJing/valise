@@ -224,7 +224,7 @@ func TestLogHelper(t *testing.T) {
 	t.Parallel()
 
 	logger, buf := getLogger(log.WithLogLevel(log.LevelAll))
-	logger.LogHelper(context.Background(), log.LevelWarn, "testlog")
+	logger.LogHelper(context.Background(), log.LevelWarn, "testlog", 0)
 
 	bufStr := buf.String()
 	assert.Contains(t, bufStr, "WARN")
