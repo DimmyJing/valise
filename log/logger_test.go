@@ -190,3 +190,14 @@ func TestLog(t *testing.T) {
 	assert.Contains(t, bufStr, "WARN")
 	assert.Contains(t, bufStr, "testlog")
 }
+
+func TestLogHelper(t *testing.T) {
+	t.Parallel()
+
+	logger, buf := getLogger(log.WithLogLevel(log.LevelAll))
+	logger.LogHelper(context.Background(), log.LevelWarn, "testlog")
+
+	bufStr := buf.String()
+	assert.Contains(t, bufStr, "WARN")
+	assert.Contains(t, bufStr, "testlog")
+}
