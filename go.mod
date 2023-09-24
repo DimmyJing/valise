@@ -4,6 +4,9 @@ go 1.21.0
 
 require (
 	github.com/charmbracelet/log v0.2.4
+	github.com/google/uuid v1.3.1
+	github.com/matoous/go-nanoid/v2 v2.0.0
+	github.com/qri-io/jsonpointer v0.1.1
 	github.com/sanity-io/litter v1.5.5
 	github.com/stretchr/testify v1.8.4
 )
