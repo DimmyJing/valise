@@ -168,6 +168,32 @@ func (l *Logger) FatalfContext(ctx context.Context, msg string, args ...any) {
 	l.log(ctx, LevelFatal, fmt.Sprintf(msg, args...), 0, nil)
 }
 
+func (l *Logger) Panic(err error, args ...attr.Attr) {
+	l.log(context.Background(), LevelFatal, err, 0, args)
+	panic(err)
+}
+
+func (l *Logger) Panicf(msg string, args ...any) {
+	utils.EmulateErrorf(msg, args...)
+	//nolint:goerr113
+	err := fmt.Errorf(msg, args...)
+	l.log(context.Background(), LevelFatal, err, 0, nil)
+	panic(err)
+}
+
+func (l *Logger) PanicContext(ctx context.Context, err error, args ...attr.Attr) {
+	l.log(ctx, LevelFatal, err, 0, args)
+	panic(err)
+}
+
+func (l *Logger) PanicfContext(ctx context.Context, msg string, args ...any) {
+	utils.EmulateErrorf(msg, args...)
+	//nolint:goerr113
+	err := fmt.Errorf(msg, args...)
+	l.log(ctx, LevelFatal, err, 0, nil)
+	panic(err)
+}
+
 func (l *Logger) Log(ctx context.Context, level Level, msg any, args ...attr.Attr) {
 	l.log(ctx, level, msg, 0, args)
 }

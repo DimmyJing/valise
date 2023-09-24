@@ -3,6 +3,7 @@ package log_test
 import (
 	"bytes"
 	"context"
+	"errors"
 	"log/slog"
 	"strings"
 	"testing"
@@ -177,6 +178,48 @@ func TestFatal(t *testing.T) {
 	for _, line := range strings.Split(strings.TrimSpace(bufStr), "\n") {
 		assert.Contains(t, line, "FATAL")
 		assert.Contains(t, line, "testfatal")
+	}
+}
+
+var errPanic = errors.New("testpanic")
+
+func TestPanic(t *testing.T) {
+	t.Parallel()
+
+	testPanic := func(function func()) {
+		defer func() {
+			if r := recover(); r != nil {
+				if err, ok := r.(error); ok {
+					assert.ErrorIs(t, err, errPanic)
+				} else {
+					t.Fail()
+				}
+			} else {
+				t.Fail()
+			}
+		}()
+		function()
+	}
+
+	logger, buf := getLogger(log.WithLogLevel(log.LevelAll))
+
+	testPanic(func() {
+		logger.Panic(errPanic)
+	})
+	testPanic(func() {
+		logger.Panicf("%w", errPanic)
+	})
+	testPanic(func() {
+		logger.PanicContext(context.Background(), errPanic)
+	})
+	testPanic(func() {
+		logger.PanicfContext(context.Background(), "%w", errPanic)
+	})
+
+	bufStr := buf.String()
+	for _, line := range strings.Split(strings.TrimSpace(bufStr), "\n") {
+		assert.Contains(t, line, "FATAL")
+		assert.Contains(t, line, "testpanic")
 	}
 }
 
