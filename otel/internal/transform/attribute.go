@@ -5,7 +5,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 )
 
-func transformKeyValues(attrs []attribute.KeyValue, pMap pcommon.Map) {
+func TransformKeyValues(attrs []attribute.KeyValue, pMap pcommon.Map) {
 	l := len(attrs)
 	if l == 0 {
 		return
@@ -18,21 +18,8 @@ func transformKeyValues(attrs []attribute.KeyValue, pMap pcommon.Map) {
 	}
 }
 
-func transformAttrIter(iter attribute.Iterator, pMap pcommon.Map) {
-	l := iter.Len()
-	if l == 0 {
-		return
-	}
-
-	pMap.EnsureCapacity(l)
-
-	for iter.Next() {
-		attr := iter.Attribute()
-		transformValue(attr.Value, pMap.PutEmpty(string(attr.Key)))
-	}
-}
-
-func transformValue(val attribute.Value, pVal pcommon.Value) { //nolint:cyclop
+func transformValue(val attribute.Value, pVal pcommon.Value) {
+	//nolint:exhaustive
 	switch val.Type() {
 	case attribute.BOOL:
 		pVal.SetBool(val.AsBool())
@@ -50,8 +37,6 @@ func transformValue(val attribute.Value, pVal pcommon.Value) { //nolint:cyclop
 		pVal.SetStr(val.AsString())
 	case attribute.STRINGSLICE:
 		stringSliceValues(val.AsStringSlice(), pVal)
-	case attribute.INVALID:
-		pVal.SetStr("INVALID")
 	default:
 		pVal.SetStr("INVALID")
 	}

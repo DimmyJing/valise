@@ -23,7 +23,10 @@ func ResourceMetrics(resourceMetrics *metricdata.ResourceMetrics) (pmetric.Metri
 	}
 
 	pResourceMetrics := metrics.ResourceMetrics().AppendEmpty()
-	transformAttrIter(resourceMetrics.Resource.Iter(), pResourceMetrics.Resource().Attributes())
+	TransformKeyValues(
+		resourceMetrics.Resource.Attributes(),
+		pResourceMetrics.Resource().Attributes(),
+	)
 	err := transformScopeMetrics(resourceMetrics.ScopeMetrics, pResourceMetrics.ScopeMetrics())
 	pResourceMetrics.SetSchemaUrl(resourceMetrics.Resource.SchemaURL())
 
@@ -122,9 +125,10 @@ func transformDataPoints[N int64 | float64](
 
 	for _, dataPoint := range dataPoints {
 		pDataPoint := pDataPoints.AppendEmpty()
-		transformAttrIter(dataPoint.Attributes.Iter(), pDataPoint.Attributes())
+		TransformKeyValues(dataPoint.Attributes.ToSlice(), pDataPoint.Attributes())
 		pDataPoint.SetStartTimestamp(pcommon.NewTimestampFromTime(dataPoint.StartTime))
 		pDataPoint.SetTimestamp(pcommon.NewTimestampFromTime(dataPoint.Time))
+		transformExemplars[N](dataPoint.Exemplars, pDataPoint.Exemplars())
 
 		switch v := any(dataPoint.Value).(type) {
 		case int64:
@@ -158,13 +162,14 @@ func transformHistogramDataPoints[N int64 | float64](
 
 	for _, dataPoint := range dataPoints {
 		pDataPoint := pDataPoints.AppendEmpty()
-		transformAttrIter(dataPoint.Attributes.Iter(), pDataPoint.Attributes())
+		TransformKeyValues(dataPoint.Attributes.ToSlice(), pDataPoint.Attributes())
 		pDataPoint.SetStartTimestamp(pcommon.NewTimestampFromTime(dataPoint.StartTime))
 		pDataPoint.SetTimestamp(pcommon.NewTimestampFromTime(dataPoint.Time))
 		pDataPoint.SetCount(dataPoint.Count)
 		pDataPoint.SetSum(float64(dataPoint.Sum))
 		pDataPoint.BucketCounts().FromRaw(dataPoint.BucketCounts)
 		pDataPoint.ExplicitBounds().FromRaw(dataPoint.Bounds)
+		transformExemplars[N](dataPoint.Exemplars, pDataPoint.Exemplars())
 
 		if v, ok := dataPoint.Min.Value(); ok {
 			pDataPoint.SetMin(float64(v))
@@ -199,7 +204,7 @@ func transformExponentialHistogramDataPoints[N int64 | float64](
 
 	for _, dataPoint := range dataPoints {
 		pDataPoint := pDataPoints.AppendEmpty()
-		transformAttrIter(dataPoint.Attributes.Iter(), pDataPoint.Attributes())
+		TransformKeyValues(dataPoint.Attributes.ToSlice(), pDataPoint.Attributes())
 		pDataPoint.SetStartTimestamp(pcommon.NewTimestampFromTime(dataPoint.StartTime))
 		pDataPoint.SetTimestamp(pcommon.NewTimestampFromTime(dataPoint.Time))
 		pDataPoint.SetCount(dataPoint.Count)
@@ -214,6 +219,7 @@ func transformExponentialHistogramDataPoints[N int64 | float64](
 			dataPoint.NegativeBucket,
 			pDataPoint.Negative(),
 		)
+		transformExemplars[N](dataPoint.Exemplars, pDataPoint.Exemplars())
 
 		if v, ok := dataPoint.Min.Value(); ok {
 			pDataPoint.SetMin(float64(v))
@@ -245,5 +251,27 @@ func temporality(temporality metricdata.Temporality) (pmetric.AggregationTempora
 			errUnknownTemporality,
 			temporality,
 		)
+	}
+}
+
+func transformExemplars[N int64 | float64](
+	exemplars []metricdata.Exemplar[N],
+	pExemplars pmetric.ExemplarSlice,
+) {
+	pExemplars.EnsureCapacity(len(exemplars))
+
+	for _, exemplar := range exemplars {
+		pExemplar := pExemplars.AppendEmpty()
+		pExemplar.SetTimestamp(pcommon.NewTimestampFromTime(exemplar.Time))
+
+		switch v := any(exemplar.Value).(type) {
+		case int64:
+			pExemplar.SetIntValue(v)
+		case float64:
+			pExemplar.SetDoubleValue(v)
+		}
+		TransformKeyValues(exemplar.FilteredAttributes, pExemplar.FilteredAttributes())
+		pExemplar.SetTraceID(pcommon.TraceID(exemplar.TraceID))
+		pExemplar.SetSpanID(pcommon.SpanID(exemplar.SpanID))
 	}
 }

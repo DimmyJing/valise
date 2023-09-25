@@ -20,6 +20,7 @@ linters:
     # misc
     - depguard
     - godox
+    - dupl
 linters-settings:
   revive:
     rules:

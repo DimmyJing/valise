@@ -18,7 +18,7 @@ type scopeKey struct {
 	is instrumentation.Scope
 }
 
-func Spans(spans []tracesdk.ReadOnlySpan) ptrace.Traces { //nolint:dupl
+func Spans(spans []tracesdk.ReadOnlySpan) ptrace.Traces {
 	traces := ptrace.NewTraces()
 	if len(spans) == 0 {
 		return traces
@@ -83,14 +83,10 @@ func transformResource(resource *resource.Resource, pResource pcommon.Resource) 
 		return
 	}
 
-	transformAttrIter(resource.Iter(), pResource.Attributes())
+	TransformKeyValues(resource.Attributes(), pResource.Attributes())
 }
 
 func transformSpan(spanData tracesdk.ReadOnlySpan, traceSpan ptrace.Span) {
-	if spanData == nil {
-		return
-	}
-
 	traceID := spanData.SpanContext().TraceID()
 	spanID := spanData.SpanContext().SpanID()
 
@@ -103,7 +99,7 @@ func transformSpan(spanData tracesdk.ReadOnlySpan, traceSpan ptrace.Span) {
 	transformLinks(spanData.Links(), traceSpan.Links())
 	traceSpan.SetKind(spanKind(spanData.SpanKind()))
 	traceSpan.SetName(spanData.Name())
-	transformKeyValues(spanData.Attributes(), traceSpan.Attributes())
+	TransformKeyValues(spanData.Attributes(), traceSpan.Attributes())
 	transformSpanEvents(spanData.Events(), traceSpan.Events())
 	traceSpan.SetDroppedAttributesCount(uint32(spanData.DroppedAttributes()))
 	traceSpan.SetDroppedEventsCount(uint32(spanData.DroppedEvents()))
@@ -117,13 +113,12 @@ func transformSpan(spanData tracesdk.ReadOnlySpan, traceSpan ptrace.Span) {
 func transformStatus(status codes.Code, message string, pStatus ptrace.Status) {
 	var code ptrace.StatusCode
 
+	//nolint:exhaustive
 	switch status {
 	case codes.Ok:
 		code = ptrace.StatusCodeOk
 	case codes.Error:
 		code = ptrace.StatusCodeError
-	case codes.Unset:
-		code = ptrace.StatusCodeUnset
 	default:
 		code = ptrace.StatusCodeUnset
 	}
@@ -150,7 +145,8 @@ func transformLinks(links []tracesdk.Link, spanLinks ptrace.SpanLinkSlice) {
 		spanLink := spanLinks.AppendEmpty()
 		spanLink.SetTraceID(pcommon.TraceID(tid[:]))
 		spanLink.SetSpanID(pcommon.SpanID(sid[:]))
-		transformKeyValues(link.Attributes, spanLink.Attributes())
+		spanLink.TraceState().FromRaw(link.SpanContext.TraceState().String())
+		TransformKeyValues(link.Attributes, spanLink.Attributes())
 		spanLink.SetDroppedAttributesCount(uint32(link.DroppedAttributeCount))
 	}
 }
@@ -166,12 +162,13 @@ func transformSpanEvents(events []tracesdk.Event, spanEvents ptrace.SpanEventSli
 		spanEvent := spanEvents.AppendEmpty()
 		spanEvent.SetName(event.Name)
 		spanEvent.SetTimestamp(pcommon.NewTimestampFromTime(event.Time))
-		transformKeyValues(event.Attributes, spanEvent.Attributes())
+		TransformKeyValues(event.Attributes, spanEvent.Attributes())
 		spanEvent.SetDroppedAttributesCount(uint32(event.DroppedAttributeCount))
 	}
 }
 
 func spanKind(kind trace.SpanKind) ptrace.SpanKind {
+	//nolint:exhaustive
 	switch kind {
 	case trace.SpanKindInternal:
 		return ptrace.SpanKindInternal
@@ -183,8 +180,6 @@ func spanKind(kind trace.SpanKind) ptrace.SpanKind {
 		return ptrace.SpanKindProducer
 	case trace.SpanKindConsumer:
 		return ptrace.SpanKindConsumer
-	case trace.SpanKindUnspecified:
-		return ptrace.SpanKindUnspecified
 	default:
 		return ptrace.SpanKindUnspecified
 	}

@@ -7,7 +7,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 )
 
-func Logs(logs []otellog.ReadOnlyLog) plog.Logs { //nolint:dupl
+func Logs(logs []otellog.ReadOnlyLog) plog.Logs {
 	pLogs := plog.NewLogs()
 	if len(logs) == 0 {
 		return pLogs
@@ -55,10 +55,6 @@ func Logs(logs []otellog.ReadOnlyLog) plog.Logs { //nolint:dupl
 }
 
 func transformLog(logData otellog.ReadOnlyLog, pLog plog.LogRecord) {
-	if logData == nil {
-		return
-	}
-
 	pLog.SetObservedTimestamp(pcommon.NewTimestampFromTime(logData.ObservedTime()))
 	pLog.SetTimestamp(pcommon.NewTimestampFromTime(logData.Time()))
 	pLog.SetTraceID(logData.TraceID())
@@ -67,7 +63,7 @@ func transformLog(logData otellog.ReadOnlyLog, pLog plog.LogRecord) {
 	pLog.SetSeverityText(logData.SeverityText())
 	pLog.SetSeverityNumber(severityNumber(logData.SeverityNumber()))
 	transformValue(logData.Body(), pLog.Body())
-	transformKeyValues(logData.Attributes(), pLog.Attributes())
+	TransformKeyValues(logData.Attributes(), pLog.Attributes())
 	pLog.SetDroppedAttributesCount(logData.DroppedAttributesCount())
 }
 
