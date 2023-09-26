@@ -1,10 +1,11 @@
-package otellog
+package attr
 
 import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"reflect"
+	"strconv"
 
 	"go.opentelemetry.io/otel/attribute"
 )
@@ -74,15 +75,33 @@ func convertAnySlice[N any](slice []any) ([]N, bool) {
 	return res, true
 }
 
-func anyToAttribute(val any) attribute.Value { //nolint:funlen,gocognit,gocyclo,cyclop,maintidx
+func marshalJSON(val any) string {
+	if res, err := json.Marshal(val); err != nil {
+		return fmt.Sprintf("failed to marshal attribute: %v", err)
+	} else {
+		if unq, err := strconv.Unquote(string(res)); err != nil {
+			return string(res)
+		} else {
+			return unq
+		}
+	}
+}
+
+func AnyToOtelValue(val any) attribute.Value { //nolint:funlen,gocognit,gocyclo,cyclop,maintidx
 	switch val := val.(type) {
 	case []slog.Attr:
 		attrs := make([]attribute.KeyValue, len(val))
 		for i, att := range val {
-			attrs[i] = SLogToOTel(att)
+			attrs[i] = OtelAttr(att)
 		}
 
-		return anyToAttribute(attribute.NewSet(attrs...))
+		return AnyToOtelValue(attribute.NewSet(attrs...).MarshalLog())
+	case attribute.Value:
+		return val
+	case LogValuer:
+		return AnyToOtelValue(val.LogValue().Any())
+	case Value:
+		return AnyToOtelValue(val.Any())
 	case int8:
 		return attribute.Int64Value(int64(val))
 	case int16:
@@ -207,15 +226,14 @@ func anyToAttribute(val any) attribute.Value { //nolint:funlen,gocognit,gocyclo,
 		res := make([]string, len(val))
 
 		for i, v := range val {
-			mar, err := json.Marshal(v)
-			if err != nil {
-				res[i] = fmt.Sprintf("failed to marshal attribute: %v", err)
-			} else {
-				res[i] = string(mar)
-			}
+			res[i] = marshalJSON(v)
 		}
 
 		return attribute.StringSliceValue(res)
+	case json.Marshaler:
+		return attribute.StringValue(marshalJSON(val))
+	case fmt.Stringer:
+		return attribute.StringValue(val.String())
 	default:
 		valKind := reflect.TypeOf(val).Kind()
 		if valKind == reflect.Slice || valKind == reflect.Array {
@@ -223,26 +241,20 @@ func anyToAttribute(val any) attribute.Value { //nolint:funlen,gocognit,gocyclo,
 			result := make([]string, reflectVal.Len())
 
 			for i := 0; i < reflectVal.Len(); i++ {
-				res, err := json.Marshal(reflectVal.Index(i).Interface())
-				if err != nil {
-					result[i] = fmt.Sprintf("failed to marshal attribute: %v", err)
-				} else {
-					result[i] = string(res)
-				}
+				result[i] = marshalJSON(reflectVal.Index(i).Interface())
 			}
 
 			return attribute.StringSliceValue(result)
 		} else {
-			res, err := json.Marshal(val)
-			if err != nil {
-				return attribute.StringValue(fmt.Sprintf("failed to marshal attribute: %v", err))
-			}
-
-			return attribute.StringValue(string(res))
+			return attribute.StringValue(marshalJSON(val))
 		}
 	}
 }
 
-func SLogToOTel(att slog.Attr) attribute.KeyValue {
-	return attribute.KeyValue{Key: attribute.Key(att.Key), Value: anyToAttribute(att.Value)}
+func OtelAttr(att Attr) attribute.KeyValue {
+	return attribute.KeyValue{Key: attribute.Key(att.Key), Value: AnyToOtelValue(att.Value.Any())}
+}
+
+func OtelValue(val Value) attribute.Value {
+	return AnyToOtelValue(val.Any())
 }

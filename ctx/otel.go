@@ -2,7 +2,6 @@ package ctx
 
 import (
 	"github.com/DimmyJing/valise/attr"
-	"github.com/DimmyJing/valise/otel/otellog"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
@@ -17,8 +16,8 @@ func (c Context) WithTracer(t trace.Tracer) Context {
 func (c Context) Nest(name string, nestedFn func(ctx Context), attrs ...attr.Attr) {
 	if tracer, ok := Value[trace.Tracer](c, tracerKey); ok {
 		res := make([]attribute.KeyValue, len(attrs))
-		for i, attr := range attrs {
-			res[i] = otellog.SLogToOTel(attr)
+		for i, a := range attrs {
+			res[i] = attr.OtelAttr(a)
 		}
 
 		ctx, span := tracer.Start(
@@ -37,8 +36,8 @@ func (c Context) Nest(name string, nestedFn func(ctx Context), attrs ...attr.Att
 func (c Context) Nested(name string, attrs ...attr.Attr) (Context, trace.Span) { //nolint:ireturn
 	if tracer, ok := Value[trace.Tracer](c, tracerKey); ok {
 		res := make([]attribute.KeyValue, len(attrs))
-		for i, attr := range attrs {
-			res[i] = otellog.SLogToOTel(attr)
+		for i, a := range attrs {
+			res[i] = attr.OtelAttr(a)
 		}
 
 		ctx, span := tracer.Start(
@@ -57,8 +56,8 @@ func (c Context) SetAttributes(attrs ...attr.Attr) {
 	span := trace.SpanFromContext(c)
 
 	res := make([]attribute.KeyValue, len(attrs))
-	for i, attr := range attrs {
-		res[i] = otellog.SLogToOTel(attr)
+	for i, a := range attrs {
+		res[i] = attr.OtelAttr(a)
 	}
 
 	span.SetAttributes(res...)
@@ -67,7 +66,7 @@ func (c Context) SetAttributes(attrs ...attr.Attr) {
 func (c Context) SetAnyAttribute(key string, val any) {
 	span := trace.SpanFromContext(c)
 
-	span.SetAttributes(otellog.SLogToOTel(attr.Any(key, val)))
+	span.SetAttributes(attribute.KeyValue{Key: attribute.Key(key), Value: attr.AnyToOtelValue(val)})
 }
 
 func (c Context) fail(msg string) {
@@ -80,8 +79,8 @@ func (c Context) recordEvent(msg any, args []attr.Attr) {
 	span := trace.SpanFromContext(c)
 	if span.IsRecording() {
 		res := make([]attribute.KeyValue, len(args))
-		for i, attr := range args {
-			res[i] = otellog.SLogToOTel(attr)
+		for i, a := range args {
+			res[i] = attr.OtelAttr(a)
 		}
 
 		if err, ok := msg.(error); ok {

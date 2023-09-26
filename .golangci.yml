@@ -13,10 +13,6 @@ linters:
     - structcheck
     - varcheck
 
-    # doesn't work with vim
-    - gofumpt
-    - gci
-
     # misc
     - depguard
     - godox

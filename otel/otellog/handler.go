@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/DimmyJing/valise/attr"
 	"github.com/DimmyJing/valise/log"
 	"go.opentelemetry.io/otel/attribute"
 )
@@ -12,7 +13,7 @@ import (
 func recordAttrs(r slog.Record) []attribute.KeyValue {
 	res := make([]attribute.KeyValue, 0, r.NumAttrs())
 	r.Attrs(func(a slog.Attr) bool {
-		res = append(res, SLogToOTel(a))
+		res = append(res, attr.OtelAttr(a))
 
 		return true
 	})
