@@ -68,6 +68,7 @@ type Logger interface {
 		body attribute.Value,
 		attributes []attribute.KeyValue,
 	) error
+	RawLog(ctx context.Context, log ReadOnlyLog) error
 }
 
 type logger struct {
@@ -82,45 +83,58 @@ func (l *logger) Log(
 	body attribute.Value,
 	attributes []attribute.KeyValue,
 ) error {
-	if l.parent.exporter != nil {
-		span := trace.SpanFromContext(ctx)
-
-		var (
-			traceID [16]byte
-			spanID  [8]byte
-		)
-
-		if span != nil {
-			traceID = span.SpanContext().TraceID()
-			spanID = span.SpanContext().SpanID()
-		}
-
-		now := time.Now()
-		result := readOnlyLog{
-			resource: l.parent.resource,
-			instrumentationScope: instrumentation.Scope{
-				Name:      l.name,
-				Version:   "", // TODO: add this as option
-				SchemaURL: "", // TODO: add this as option
-			},
-			observedTime:           now,
-			time:                   now,
-			traceID:                traceID,
-			spanID:                 spanID,
-			flags:                  LogFlagsIsSampled, // TODO: add this as option
-			severityText:           severityText,
-			severityNumber:         severityNumber,
-			body:                   body,
-			attributes:             attributes,
-			droppedAttributesCount: 0, // TODO: add attribute dropping
-		}
-
-		err := l.parent.exporter.ExportLogs(ctx, []ReadOnlyLog{result})
-		if err != nil {
-			return fmt.Errorf("error export logs: %w", err)
-		}
-
+	if l.parent.exporter == nil {
 		return nil
+	}
+
+	span := trace.SpanFromContext(ctx)
+
+	var (
+		traceID [16]byte
+		spanID  [8]byte
+	)
+
+	if span != nil {
+		traceID = span.SpanContext().TraceID()
+		spanID = span.SpanContext().SpanID()
+	}
+
+	now := time.Now()
+	result := readOnlyLog{
+		resource: l.parent.resource,
+		instrumentationScope: instrumentation.Scope{
+			Name:      l.name,
+			Version:   "", // TODO: add this as option
+			SchemaURL: "", // TODO: add this as option
+		},
+		observedTime:           now,
+		time:                   now,
+		traceID:                traceID,
+		spanID:                 spanID,
+		flags:                  LogFlagsIsSampled, // TODO: add this as option
+		severityText:           severityText,
+		severityNumber:         severityNumber,
+		body:                   body,
+		attributes:             attributes,
+		droppedAttributesCount: 0, // TODO: add attribute dropping
+	}
+
+	err := l.parent.exporter.ExportLogs(ctx, []ReadOnlyLog{result})
+	if err != nil {
+		return fmt.Errorf("error export logs: %w", err)
+	}
+
+	return nil
+}
+
+func (l *logger) RawLog(ctx context.Context, log ReadOnlyLog) error {
+	if l.parent.exporter == nil {
+		return nil
+	}
+
+	err := l.parent.exporter.ExportLogs(ctx, []ReadOnlyLog{log})
+	if err != nil {
+		return fmt.Errorf("error export logs: %w", err)
 	}
 
 	return nil
