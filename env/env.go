@@ -119,7 +119,7 @@ var errInvalidKey = errors.New(
 	"failed to get env decryption key, there must either be a .key file in the root of the project or a KEY env var",
 )
 
-func InitEnv(envJSON []byte) error {
+func Init(envJSON []byte) error {
 	secretKey, err := getKey()
 	if err != nil {
 		return errInvalidKey
