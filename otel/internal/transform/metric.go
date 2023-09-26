@@ -27,6 +27,7 @@ func ResourceMetrics(resourceMetrics *metricdata.ResourceMetrics) (pmetric.Metri
 		resourceMetrics.Resource.Attributes(),
 		pResourceMetrics.Resource().Attributes(),
 	)
+
 	err := transformScopeMetrics(resourceMetrics.ScopeMetrics, pResourceMetrics.ScopeMetrics())
 	pResourceMetrics.SetSchemaUrl(resourceMetrics.Resource.SchemaURL())
 

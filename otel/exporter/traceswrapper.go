@@ -1,4 +1,4 @@
-package otel //nolint:dupl
+package exporter
 
 import (
 	"context"
@@ -35,7 +35,7 @@ func (t *tracesExporter) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-func NewTracesExporter(ctx context.Context, traces exporter.Traces) (*tracesExporter, error) {
+func NewTracesWrapper(ctx context.Context, traces exporter.Traces) (*tracesExporter, error) {
 	err := traces.Start(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("error starting traces: %w", err)

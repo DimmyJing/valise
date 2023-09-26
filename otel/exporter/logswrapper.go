@@ -1,4 +1,4 @@
-package otel //nolint:dupl
+package exporter
 
 import (
 	"context"
@@ -35,7 +35,7 @@ func (l *logsExporter) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-func NewLogsExporter(ctx context.Context, logs exporter.Logs) (*logsExporter, error) {
+func NewLogsWrapper(ctx context.Context, logs exporter.Logs) (*logsExporter, error) {
 	err := logs.Start(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("error starting logs: %w", err)

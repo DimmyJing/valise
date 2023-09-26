@@ -1,8 +1,7 @@
-package otel
+package exporter
 
 import (
 	"context"
-	"io"
 
 	"github.com/DimmyJing/valise/log"
 	"go.opentelemetry.io/collector/component"
@@ -49,11 +48,10 @@ func (e *ioWriterExporter) Shutdown(context.Context) error {
 	return nil
 }
 
-func GetIOWriterExporters( //nolint:ireturn
+func NewIOWriterExporters( //nolint:ireturn
 	ctx context.Context,
-	writer io.Writer,
+	logger *log.Logger,
 ) (exporter.Traces, exporter.Metrics, exporter.Logs) {
-	logger := log.New(log.WithCharm())
 	exporter := &ioWriterExporter{logger: logger}
 
 	return exporter, exporter, exporter

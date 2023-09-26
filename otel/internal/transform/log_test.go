@@ -77,12 +77,6 @@ func (b *logBuilder) addResource(
 	b.pScopeLogs = b.pResourceLog.ScopeLogs()
 }
 
-func (b *logBuilder) addEmptyResource() {
-	b.resource = nil
-	b.pResourceLog = b.pResourceLogs.AppendEmpty()
-	b.pScopeLogs = b.pResourceLog.ScopeLogs()
-}
-
 func (b *logBuilder) addScope(
 	scopeName string,
 	scopeVersion string,

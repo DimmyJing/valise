@@ -1,4 +1,4 @@
-package otel
+package exporter
 
 import (
 	"context"
@@ -92,7 +92,7 @@ func WithAggregation(fn func(metric.InstrumentKind) metric.Aggregation) withAggr
 	return withAggregationFn{fn: fn}
 }
 
-func NewMetricsExporter(
+func NewMetricsWrapper(
 	ctx context.Context,
 	metrics exporter.Metrics,
 	options ...MetricsExporterOption,

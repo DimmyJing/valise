@@ -1,4 +1,4 @@
-package otel
+package exporter
 
 import (
 	"context"
@@ -112,14 +112,17 @@ func (c *ClickhouseConfig) exportTo(config *clickhouseexporter.Config) { //nolin
 	}
 }
 
-func GetClickhouseExporters( //nolint:ireturn,funlen
+func NewClickhouseExporters( //nolint:ireturn,funlen
 	ctx context.Context,
 	config *ClickhouseConfig,
 ) (exporter.Traces, exporter.Metrics, exporter.Logs, error) {
 	var (
-		traces  exporter.Traces
-		metrics exporter.Metrics
-		logs    exporter.Logs
+		traces     exporter.Traces
+		metrics    exporter.Metrics
+		logs       exporter.Logs
+		tracesErr  error
+		metricsErr error
+		logsError  error
 	)
 
 	factory := clickhouseexporter.NewFactory()
@@ -129,11 +132,7 @@ func GetClickhouseExporters( //nolint:ireturn,funlen
 
 	loggerCfg := zap.NewProductionConfig()
 	loggerCfg.Level = zap.NewAtomicLevelAt(zap.WarnLevel)
-
-	logger, err := loggerCfg.Build()
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to build logger config: %w", err)
-	}
+	logger, _ := loggerCfg.Build()
 
 	telemetrySettings := component.TelemetrySettings{
 		Logger:         logger,
@@ -150,10 +149,7 @@ func GetClickhouseExporters( //nolint:ireturn,funlen
 		BuildInfo:         buildInfo,
 	}
 
-	traces, err = factory.CreateTracesExporter(ctx, tracesSettings, factoryCfg)
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to create traces exporter: %w", err)
-	}
+	traces, tracesErr = factory.CreateTracesExporter(ctx, tracesSettings, factoryCfg)
 
 	metricsSettings := exporter.CreateSettings{
 		ID:                component.NewIDWithName(component.DataTypeMetrics, config.Name),
@@ -161,10 +157,7 @@ func GetClickhouseExporters( //nolint:ireturn,funlen
 		BuildInfo:         buildInfo,
 	}
 
-	metrics, err = factory.CreateMetricsExporter(ctx, metricsSettings, factoryCfg)
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to create metrics exporter: %w", err)
-	}
+	metrics, metricsErr = factory.CreateMetricsExporter(ctx, metricsSettings, factoryCfg)
 
 	logsSettings := exporter.CreateSettings{
 		ID:                component.NewIDWithName(component.DataTypeLogs, config.Name),
@@ -172,9 +165,15 @@ func GetClickhouseExporters( //nolint:ireturn,funlen
 		BuildInfo:         buildInfo,
 	}
 
-	logs, err = factory.CreateLogsExporter(ctx, logsSettings, factoryCfg)
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to create logs exporter: %w", err)
+	logs, logsError = factory.CreateLogsExporter(ctx, logsSettings, factoryCfg)
+
+	if tracesErr != nil || metricsErr != nil || logsError != nil {
+		return nil, nil, nil, fmt.Errorf(
+			"failed to create exporters: traces: %w, metrics: %w, logs: %w",
+			tracesErr,
+			metricsErr,
+			logsError,
+		)
 	}
 
 	return traces, metrics, logs, nil

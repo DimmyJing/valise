@@ -21,6 +21,7 @@ linters:
     - depguard
     - godox
     - dupl
+    - dogsled
 linters-settings:
   revive:
     rules:
