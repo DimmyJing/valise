@@ -12,7 +12,7 @@ import (
 func recordAttrs(r slog.Record) []attribute.KeyValue {
 	res := make([]attribute.KeyValue, 0, r.NumAttrs())
 	r.Attrs(func(a slog.Attr) bool {
-		res = append(res, slogToOtel(a))
+		res = append(res, SLogToOTel(a))
 
 		return true
 	})

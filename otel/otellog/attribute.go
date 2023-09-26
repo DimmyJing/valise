@@ -79,7 +79,7 @@ func anyToAttribute(val any) attribute.Value { //nolint:funlen,gocognit,gocyclo,
 	case []slog.Attr:
 		attrs := make([]attribute.KeyValue, len(val))
 		for i, att := range val {
-			attrs[i] = slogToOtel(att)
+			attrs[i] = SLogToOTel(att)
 		}
 
 		return anyToAttribute(attribute.NewSet(attrs...))
@@ -243,6 +243,6 @@ func anyToAttribute(val any) attribute.Value { //nolint:funlen,gocognit,gocyclo,
 	}
 }
 
-func slogToOtel(att slog.Attr) attribute.KeyValue {
+func SLogToOTel(att slog.Attr) attribute.KeyValue {
 	return attribute.KeyValue{Key: attribute.Key(att.Key), Value: anyToAttribute(att.Value)}
 }

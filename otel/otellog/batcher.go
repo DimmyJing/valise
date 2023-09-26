@@ -61,6 +61,9 @@ func (b *batcher) ExportLogs(ctx context.Context, logs []ReadOnlyLog) error {
 }
 
 func (b *batcher) Shutdown(ctx context.Context) error {
+	close(b.stopCh)
+	b.stopWait.Wait()
+
 	err := b.exporter.Shutdown(ctx)
 	if err != nil {
 		return fmt.Errorf("failed shutting down log exporter: %w", err)
