@@ -154,7 +154,7 @@
 			"minLength": 1
 		},
 		"contentSchema": {
-			"$ref": "#/$defs/schema"
+			"$ref": "#"
 		},
 		"title": {
 			"type": "string"
@@ -183,40 +183,40 @@
 		"allOf": {
 			"type": "array",
 			"items": {
-				"$ref": "#/$defs/schema"
+				"$ref": "#"
 			},
 			"minItems": 1
 		},
 		"anyOf": {
 			"type": "array",
 			"items": {
-				"$ref": "#/$defs/schema"
+				"$ref": "#"
 			},
 			"minItems": 1
 		},
 		"oneOf": {
 			"type": "array",
 			"items": {
-				"$ref": "#/$defs/schema"
+				"$ref": "#"
 			},
 			"minItems": 1
 		},
 		"not": {
-			"$ref": "#/$defs/schema"
+			"$ref": "#"
 		},
 		"if": {
-			"$ref": "#/$defs/schema"
+			"$ref": "#"
 		},
 		"then": {
-			"$ref": "#/$defs/schema"
+			"$ref": "#"
 		},
 		"else": {
-			"$ref": "#/$defs/schema"
+			"$ref": "#"
 		},
 		"dependentSchemas": {
 			"type": "object",
 			"additionalProperties": {
-				"$ref": "#/$defs/schema"
+				"$ref": "#"
 			},
 			"minProperties": 1,
 			"default": {}
@@ -224,20 +224,20 @@
 		"prefixItems": {
 			"type": "array",
 			"items": {
-				"$ref": "#/$defs/schema"
+				"$ref": "#"
 			},
 			"minItems": 1
 		},
 		"items": {
-			"$ref": "#/$defs/schema"
+			"$ref": "#"
 		},
 		"contains": {
-			"$ref": "#/$defs/schema"
+			"$ref": "#"
 		},
 		"properties": {
 			"type": "object",
 			"additionalProperties": {
-				"$ref": "#/$defs/schema"
+				"$ref": "#"
 			},
 			"minProperties": 1,
 			"default": {}
@@ -245,23 +245,23 @@
 		"patternProperties": {
 			"type": "object",
 			"additionalProperties": {
-				"$ref": "#/$defs/schema"
+				"$ref": "#"
 			},
 			"minProperties": 1,
 			"default": {}
 		},
 		"additionalProperties": {
-			"$ref": "#/$defs/schema",
+			"$ref": "#",
 			"default": true
 		},
 		"propertyNames": {
-			"$ref": "#/$defs/schema"
+			"$ref": "#"
 		},
 		"unevaluatedItems": {
-			"$ref": "#/$defs/schema"
+			"$ref": "#"
 		},
 		"unevaluatedProperties": {
-			"$ref": "#/$defs/schema"
+			"$ref": "#"
 		},
 		"discriminator": {
 			"type": "object",
