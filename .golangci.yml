@@ -18,8 +18,22 @@ linters:
     - godox
     - dupl
     - dogsled
+    - contextcheck
 linters-settings:
   revive:
     rules:
       - name: unexported-return
         disabled: true
+  wrapcheck:
+    ignoreSigs:
+      - .Errorf(
+      - errors.New(
+      - errors.Unwrap(
+      - .Wrap(
+      - .Wrapf(
+      - .WithMessage(
+      - .WithMessagef(
+      - .WithStack(
+      - .Fail(
+      - .FailIf(
+      - .Capture(

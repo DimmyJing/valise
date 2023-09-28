@@ -33,7 +33,7 @@ func (c Context) Nest(name string, nestedFn func(ctx Context), attrs ...attr.Att
 	}
 }
 
-func (c Context) Nested(name string, attrs ...attr.Attr) (Context, trace.Span) { //nolint:ireturn
+func (c Context) Nested(name string, attrs ...attr.Attr) (Context, func()) {
 	if tracer, ok := Value[trace.Tracer](c, tracerKey); ok {
 		res := make([]attribute.KeyValue, len(attrs))
 		for i, a := range attrs {
@@ -46,10 +46,10 @@ func (c Context) Nested(name string, attrs ...attr.Attr) (Context, trace.Span) {
 			trace.WithAttributes(res...),
 		)
 
-		return From(ctx), span
+		return From(ctx), func() { span.End() }
 	}
 
-	return c, trace.SpanFromContext(c)
+	return c, func() { trace.SpanFromContext(c).End() }
 }
 
 func (c Context) SetAttributes(attrs ...attr.Attr) {

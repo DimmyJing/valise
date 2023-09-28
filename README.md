@@ -2,16 +2,17 @@
 
 # packages with 100% coverage
 
-+ valise/attr
-+ valise/log
-+ valise/utils
-+ valise/otel/internal/transform
-+ valise/otel/exporter
++ attr
++ log
++ utils
++ otel/internal/transform
++ otel/exporter
++ orm/firestore
 
 # packages without 100% coverage
 
-+ valise/otel/otellog
-+ valise/jsonschema
-+ valise/otel
-+ valise/env
-+ valise/ctx
++ otel/otellog
++ otel
++ env
++ ctx
++ orm/firestore/mockfs
