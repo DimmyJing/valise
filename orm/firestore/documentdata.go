@@ -12,9 +12,7 @@ import (
 	"github.com/DimmyJing/valise/attr"
 	"github.com/DimmyJing/valise/ctx"
 	"github.com/DimmyJing/valise/jsonschema"
-	"github.com/DimmyJing/valise/utils"
 	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 var (
@@ -54,10 +52,6 @@ func transformStruct(data proto.Message, create bool) (map[string]any, error) {
 		return nil, fmt.Errorf("failed to convert message to map %v: %w", data, errInvalidStruct)
 	}
 
-	if versioner, ok := data.(Versioner); ok {
-		resMap["version"] = versioner.CurrentVersion()
-	}
-
 	if updatedAt, ok := resMap["updatedAt"]; ok {
 		if _, ok := updatedAt.(time.Time); ok {
 			resMap["updatedAt"] = time.Now().UTC()
@@ -74,14 +68,7 @@ func transformStruct(data proto.Message, create bool) (map[string]any, error) {
 }
 
 // TODO: figure out what to do with migrations.
-type Migrater interface {
-	Migrate(map[string]any) map[string]any
-}
-
 // TODO: figure out what to do with versions.
-type Versioner interface {
-	CurrentVersion() string
-}
 
 func callDataFrom[Doc any, Data any](doc *Doc, snap *firestore.DocumentSnapshot) (Data, error) { //nolint:ireturn
 	docVal := reflect.ValueOf(doc)
@@ -95,34 +82,28 @@ func callDataFrom[Doc any, Data any](doc *Doc, snap *firestore.DocumentSnapshot)
 	return res[0].Interface().(Data), nil
 }
 
-func (d *Doc[D]) DataFrom(snap *firestore.DocumentSnapshot) (D, error) { //nolint:ireturn,funlen,cyclop
+func (d *Doc[D]) DataFrom(snap *firestore.DocumentSnapshot) (D, error) { //nolint:ireturn
 	data := *new(D)
 
 	rawData := snap.Data()
 	needMigration := false
 
-	defer func() {
-		idField := data.ProtoReflect().Descriptor().Fields().ByJSONName("id")
-		if idField != nil && idField.Kind() == protoreflect.StringKind {
-			data.ProtoReflect().Set(idField, protoreflect.ValueOfString(snap.Ref.ID))
-		}
-	}()
-
 	var err error
 
-	//nolint:nestif
-	if versioner, ok := any(data).(Versioner); ok {
-		if version, ok := rawData["version"]; ok {
-			if versionStr, ok := version.(string); ok {
-				res, err := utils.CompareSemVer(versioner.CurrentVersion(), versionStr)
-				if err != nil {
-					return data, fmt.Errorf("failed to compare versions: %w", err)
-				}
+	/*
+		if versioner, ok := any(data).(Versioner); ok {
+			if version, ok := rawData["version"]; ok {
+				if versionStr, ok := version.(string); ok {
+					res, err := utils.CompareSemVer(versioner.CurrentVersion(), versionStr)
+					if err != nil {
+						return data, fmt.Errorf("failed to compare versions: %w", err)
+					}
 
-				needMigration = res > 0
+					needMigration = res > 0
+				}
 			}
 		}
-	}
+	*/
 
 	if !needMigration {
 		msg := data.ProtoReflect().New()
@@ -141,22 +122,24 @@ func (d *Doc[D]) DataFrom(snap *firestore.DocumentSnapshot) (D, error) { //nolin
 		err = errMissingMigration
 	}
 
-	if migrater, ok := any(data).(Migrater); ok {
-		rawData = migrater.Migrate(rawData)
+	/*
+		if migrater, ok := any(data).(Migrater); ok {
+			rawData = migrater.Migrate(rawData)
 
-		msg := data.ProtoReflect().New()
+			msg := data.ProtoReflect().New()
 
-		err := jsonschema.AnyToMessage(rawData, msg)
-		if err != nil {
-			return data, fmt.Errorf("failed to convert data to D after migration: %w", err)
+			err := jsonschema.AnyToMessage(rawData, msg)
+			if err != nil {
+				return data, fmt.Errorf("failed to convert data to D after migration: %w", err)
+			}
+
+			if dat, ok := msg.Interface().(D); ok {
+				data = dat
+			} else {
+				return data, fmt.Errorf("failed to convert data to D: %w", err)
+			}
 		}
-
-		if dat, ok := msg.Interface().(D); ok {
-			data = dat
-		} else {
-			return data, fmt.Errorf("failed to convert data to D: %w", err)
-		}
-	}
+	*/
 
 	return data, fmt.Errorf("failed to fill struct with data: %w", err)
 }

@@ -53,6 +53,11 @@ func (i *docRefIterator[Doc]) HasNext() bool {
 	return i.errCache != iterator.Done
 }
 
+type DocSnap[Doc any, D proto.Message] struct {
+	Doc  Doc
+	Data D
+}
+
 type docIterator[Doc any, D proto.Message] struct {
 	iter   *firestore.DocumentIterator
 	client *firestore.Client
@@ -61,7 +66,7 @@ type docIterator[Doc any, D proto.Message] struct {
 	errCache error
 }
 
-func (i *docIterator[Doc, D]) Next() (D, error) { //nolint:ireturn
+func (i *docIterator[Doc, D]) Next() (DocSnap[Doc, D], error) {
 	var snap *firestore.DocumentSnapshot
 
 	//nolint:nestif
@@ -72,13 +77,13 @@ func (i *docIterator[Doc, D]) Next() (D, error) { //nolint:ireturn
 		}()
 
 		if doc, err := i.docCache, i.errCache; err != nil {
-			return *new(D), fmt.Errorf("failed getting next document: %w", err)
+			return DocSnap[Doc, D]{}, fmt.Errorf("failed getting next document: %w", err)
 		} else {
 			snap = doc
 		}
 	} else {
 		if doc, err := i.iter.Next(); err != nil {
-			return *new(D), fmt.Errorf("failed getting next document: %w", err)
+			return DocSnap[Doc, D]{}, fmt.Errorf("failed getting next document: %w", err)
 		} else {
 			snap = doc
 		}
@@ -88,10 +93,10 @@ func (i *docIterator[Doc, D]) Next() (D, error) { //nolint:ireturn
 
 	data, err := callDataFrom[Doc, D](&doc, snap)
 	if err != nil {
-		return *new(D), fmt.Errorf("failed getting data from snapshot: %w", err)
+		return DocSnap[Doc, D]{}, fmt.Errorf("failed getting data from snapshot: %w", err)
 	}
 
-	return data, nil
+	return DocSnap[Doc, D]{Doc: doc, Data: data}, nil
 }
 
 func (i *docIterator[Doc, D]) HasNext() bool {
@@ -151,11 +156,11 @@ func (c *Collection[Doc, D]) QueryIter(ctx ctx.Context, queryFns ...func(query Q
 	}
 }
 
-func (c *Collection[Doc, D]) Query(ctx ctx.Context, queryFns ...func(query Query) Query) ([]D, error) {
+func (c *Collection[Doc, D]) Query(ctx ctx.Context, queryFns ...func(query Query) Query) ([]DocSnap[Doc, D], error) {
 	ctx, end := ctx.Nested("queryDocuments", attr.String("path", c.Ref().Path))
 	defer end()
 
-	res := make([]D, 0)
+	res := make([]DocSnap[Doc, D], 0)
 
 	it := c.QueryIter(ctx, queryFns...)
 	for it.HasNext() {

@@ -2,19 +2,57 @@ package ctx
 
 import (
 	"github.com/DimmyJing/valise/attr"
+	"github.com/DimmyJing/valise/otel/otellog"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 )
 
-const tracerKey contextKey = "otelTracer"
+const (
+	otelTracerKey contextKey = "otelTracer"
+	otelMeterKey  contextKey = "otelMeter"
+	otelLogKey    contextKey = "otelLog"
+)
 
-func (c Context) WithTracer(t trace.Tracer) Context {
-	return c.WithValue(tracerKey, t)
+func (c Context) WithOTelTracer(t trace.Tracer) Context {
+	return c.WithValue(otelTracerKey, t)
+}
+
+func (c Context) OTelTracer() trace.Tracer { //nolint:ireturn
+	if tracer, ok := Value[trace.Tracer](c, otelTracerKey); ok {
+		return tracer
+	}
+
+	return nil
+}
+
+func (c Context) WithOTelMeter(m metric.Meter) Context {
+	return c.WithValue(otelMeterKey, m)
+}
+
+func (c Context) OTelMeter() metric.Meter { //nolint:ireturn
+	if meter, ok := Value[metric.Meter](c, otelMeterKey); ok {
+		return meter
+	}
+
+	return nil
+}
+
+func (c Context) WithOTelLog(l otellog.Logger) Context {
+	return c.WithValue(otelLogKey, l)
+}
+
+func (c Context) OTelLog() otellog.Logger { //nolint:ireturn
+	if logger, ok := Value[otellog.Logger](c, otelLogKey); ok {
+		return logger
+	}
+
+	return nil
 }
 
 func (c Context) Nest(name string, nestedFn func(ctx Context), attrs ...attr.Attr) {
-	if tracer, ok := Value[trace.Tracer](c, tracerKey); ok {
+	if tracer, ok := Value[trace.Tracer](c, otelTracerKey); ok {
 		res := make([]attribute.KeyValue, len(attrs))
 		for i, a := range attrs {
 			res[i] = attr.OtelAttr(a)
@@ -34,7 +72,7 @@ func (c Context) Nest(name string, nestedFn func(ctx Context), attrs ...attr.Att
 }
 
 func (c Context) Nested(name string, attrs ...attr.Attr) (Context, func()) {
-	if tracer, ok := Value[trace.Tracer](c, tracerKey); ok {
+	if tracer, ok := Value[trace.Tracer](c, otelTracerKey); ok {
 		res := make([]attribute.KeyValue, len(attrs))
 		for i, a := range attrs {
 			res[i] = attr.OtelAttr(a)

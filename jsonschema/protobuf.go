@@ -1,7 +1,6 @@
 package jsonschema
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/fs"
 	"os"
@@ -16,7 +15,7 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-type jsonInfo struct {
+type JSONInfo struct {
 	Title       string `json:"title,omitempty"`
 	Description string `json:"description,omitempty"`
 
@@ -25,13 +24,13 @@ type jsonInfo struct {
 
 	Enums []string `json:"enum,omitempty"`
 
-	Items *jsonInfo `json:"items,omitempty"`
+	Items *JSONInfo `json:"items,omitempty"`
 
-	Properties *orderedmap.OrderedMap[string, *jsonInfo] `json:"properties,omitempty"`
+	Properties *orderedmap.OrderedMap[string, *JSONInfo] `json:"properties,omitempty"`
 	Required   []string                                  `json:"reqired,omitempty"`
 
-	OneOf []*jsonInfo `json:"oneOf,omitempty"`
-	AllOf []*jsonInfo `json:"allOf,omitempty"`
+	OneOf []*JSONInfo `json:"oneOf,omitempty"`
+	AllOf []*JSONInfo `json:"allOf,omitempty"`
 
 	AdditionalProperties any `json:"additionalProperties,omitempty"`
 
@@ -40,11 +39,11 @@ type jsonInfo struct {
 
 var errInvalidField = fmt.Errorf("invalid field")
 
-func generateFromField(field protoreflect.FieldDescriptor, nested bool) *jsonInfo { //nolint:funlen,cyclop
+func generateFromField(field protoreflect.FieldDescriptor, nested bool) *JSONInfo { //nolint:funlen,cyclop
 	//nolint:exhaustruct
-	info := jsonInfo{
+	info := JSONInfo{
 		Title:       field.JSONName(),
-		Description: protoMap[string(field.FullName())],
+		Description: protoMap[field.FullName()],
 		optional:    field.HasOptionalKeyword(),
 	}
 
@@ -133,17 +132,17 @@ var wellKnownTypes = map[string]bool{
 	"Value":     true,
 }
 
-func generateFromMessage(message protoreflect.MessageDescriptor) *jsonInfo { //nolint:funlen,cyclop
+func generateFromMessage(message protoreflect.MessageDescriptor) *JSONInfo { //nolint:funlen,cyclop
 	//nolint:exhaustruct
-	info := jsonInfo{
+	info := JSONInfo{
 		Title:       string(message.Name()),
-		Description: protoMap[string(message.FullName())],
+		Description: protoMap[message.FullName()],
 		Type:        "object",
 	}
 	falseVal := false
 	info.AdditionalProperties = &falseVal
 
-	allOneOfs := [][]*jsonInfo{}
+	allOneOfs := [][]*JSONInfo{}
 	oneOfNames := map[string]bool{}
 
 	if wellKnownTypes[string(message.Name())] && message.ParentFile().Package() == "google.protobuf" {
@@ -175,13 +174,13 @@ func generateFromMessage(message protoreflect.MessageDescriptor) *jsonInfo { //n
 			continue
 		}
 
-		oneOfs := []*jsonInfo{}
+		oneOfs := []*JSONInfo{}
 
 		fields := oneOf.Fields()
 		for j := 0; j < fields.Len(); j++ {
 			name := fields.Get(j).JSONName()
 			//nolint:exhaustruct
-			oneOfs = append(oneOfs, &jsonInfo{Required: []string{name}})
+			oneOfs = append(oneOfs, &JSONInfo{Required: []string{name}})
 			oneOfNames[name] = true
 		}
 
@@ -198,7 +197,7 @@ func generateFromMessage(message protoreflect.MessageDescriptor) *jsonInfo { //n
 		}
 
 		if info.Properties == nil {
-			info.Properties = orderedmap.New[string, *jsonInfo]()
+			info.Properties = orderedmap.New[string, *JSONInfo]()
 		}
 
 		info.Properties.Set(fieldInfo.Title, fieldInfo)
@@ -206,10 +205,10 @@ func generateFromMessage(message protoreflect.MessageDescriptor) *jsonInfo { //n
 
 	if len(allOneOfs) > 0 {
 		if len(allOneOfs) > 1 {
-			info.AllOf = []*jsonInfo{}
+			info.AllOf = []*JSONInfo{}
 			for _, oneOfs := range allOneOfs {
 				//nolint:exhaustruct
-				info.AllOf = append(info.AllOf, &jsonInfo{OneOf: oneOfs})
+				info.AllOf = append(info.AllOf, &JSONInfo{OneOf: oneOfs})
 			}
 		} else {
 			info.OneOf = allOneOfs[0]
@@ -220,7 +219,7 @@ func generateFromMessage(message protoreflect.MessageDescriptor) *jsonInfo { //n
 }
 
 //nolint:gochecknoglobals
-var protoMap = make(map[string]string)
+var protoMap = make(map[protoreflect.FullName]string)
 
 var errNoPackageName = fmt.Errorf("no package names in proto file")
 
@@ -252,7 +251,7 @@ func processComments(
 		}
 	}
 
-	protoMap[prefix+"."+name] = strings.Join(lines, "\n")
+	protoMap[protoreflect.FullName(prefix+"."+name)] = strings.Join(lines, "\n")
 }
 
 func processVisitee(visitee parser.Visitee, prefix string) { //nolint:cyclop,funlen
@@ -378,13 +377,42 @@ func InitProtoMap(projectDir string) {
 	}
 }
 
-func GenerateSchema(message proto.Message) string {
-	info := generateFromMessage(message.ProtoReflect().Descriptor())
+type schemasResult struct {
+	Title       string
+	Description string
+	Required    bool
+	Schema      JSONInfo
+}
 
-	res, err := json.MarshalIndent(info, "", "  ")
-	if err != nil {
-		log.Panic(err)
+func GenerateSchemas(message proto.Message) []schemasResult {
+	msgDesc := message.ProtoReflect().Descriptor()
+
+	result := []schemasResult{}
+
+	fields := msgDesc.Fields()
+	for i := 0; i < fields.Len(); i++ {
+		fieldInfo := generateFromField(fields.Get(i), false)
+
+		result = append(result, schemasResult{
+			Title:       fieldInfo.Title,
+			Description: fieldInfo.Description,
+			Required:    !fieldInfo.optional,
+			Schema:      *fieldInfo,
+		})
 	}
 
-	return string(res)
+	return result
+}
+
+func GenerateSchema(message proto.Message) *JSONInfo {
+	return generateFromMessage(message.ProtoReflect().Descriptor())
+}
+
+func GetComment(message proto.Message) string {
+	res, has := protoMap[message.ProtoReflect().Descriptor().FullName()]
+	if has {
+		return res
+	} else {
+		return ""
+	}
 }

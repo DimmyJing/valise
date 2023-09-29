@@ -1,31 +1,25 @@
 package jsonschema
 
 import (
-	"encoding/json"
 	"fmt"
 	"slices"
 	"strings"
 )
 
-func JSONSchemaToTS(inp string) (string, error) {
-	var res jsonInfo
+var errInvalidJSON = fmt.Errorf("invalid jsoninfo")
 
-	err := json.Unmarshal([]byte(inp), &res)
-	if err != nil {
-		return "", fmt.Errorf("failed to unmarshal json schema: %w", err)
-	}
-
-	types, err := jsonSchemaToTS(res)
+func JSONSchemaToTS(inp *JSONInfo, prefix string) (string, error) {
+	types, err := jsonSchemaToTS(*inp)
 	if err != nil {
 		return "", fmt.Errorf("failed to convert json schema to ts: %w", err)
 	}
 
-	return types, nil
+	return FormatComment(inp.Description) + prefix + types, nil
 }
 
 var errInvalidSchema = fmt.Errorf("invalid schema")
 
-func formatComment(comment string) string {
+func FormatComment(comment string) string {
 	if comment == "" {
 		return ""
 	}
@@ -72,7 +66,7 @@ func indentMiddle(input string) string {
 	return builder.String()
 }
 
-func jsonSchemaToTS(input jsonInfo) (string, error) { //nolint:funlen,cyclop,gocognit
+func jsonSchemaToTS(input JSONInfo) (string, error) { //nolint:funlen,cyclop,gocognit
 	if input.Type == "" {
 		return "unknown", nil
 	}
@@ -135,13 +129,13 @@ func jsonSchemaToTS(input jsonInfo) (string, error) { //nolint:funlen,cyclop,goc
 					return "", fmt.Errorf("failed to convert object properties: %w", err)
 				}
 
-				insideBuilder.WriteString(formatComment(value.Description))
+				insideBuilder.WriteString(FormatComment(value.Description))
 				insideBuilder.WriteString(fmt.Sprintf("%s%s: %s;\n", key, optional, res))
 			}
 			insideBuilder.WriteString("}")
 
 			return indentMiddle(insideBuilder.String()), nil
-		} else if prop, ok := input.AdditionalProperties.(jsonInfo); ok {
+		} else if prop, ok := input.AdditionalProperties.(JSONInfo); ok {
 			res, err := jsonSchemaToTS(prop)
 			if err != nil {
 				return "", fmt.Errorf("failed to convert object properties: %w", err)

@@ -13,6 +13,7 @@ require (
 	github.com/sahilm/fuzzy v0.1.0
 	github.com/sanity-io/litter v1.5.5
 	github.com/stretchr/testify v1.8.4
+	github.com/swaggest/swgui v1.7.4
 	github.com/weathersource/go-gsrv v1.0.2
 	github.com/wk8/go-ordered-map/v2 v2.1.8
 	github.com/yoheimuta/go-protoparser v3.4.0+incompatible
@@ -29,7 +30,6 @@ require (
 	go.opentelemetry.io/otel/trace v1.18.0
 	go.uber.org/zap v1.26.0
 	google.golang.org/api v0.126.0
-	google.golang.org/genproto v0.0.0-20230913181813-007df8e322eb
 	google.golang.org/grpc v1.58.2
 	google.golang.org/protobuf v1.31.0
 )
@@ -89,6 +89,7 @@ require (
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
+	github.com/vearutop/statigz v1.4.0 // indirect
 	github.com/weathersource/go-errors v1.0.2 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/collector v0.86.0 // indirect
@@ -107,6 +108,7 @@ require (
 	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
+	google.golang.org/genproto v0.0.0-20230913181813-007df8e322eb // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20230803162519-f966b187b2e5 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230920204549-e6e6cdab5c13 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
