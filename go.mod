@@ -14,6 +14,8 @@ require (
 	github.com/sanity-io/litter v1.5.5
 	github.com/stretchr/testify v1.8.4
 	github.com/weathersource/go-gsrv v1.0.2
+	github.com/wk8/go-ordered-map/v2 v2.1.8
+	github.com/yoheimuta/go-protoparser v3.4.0+incompatible
 	go.opentelemetry.io/collector/component v0.86.0
 	go.opentelemetry.io/collector/config/configopaque v0.86.0
 	go.opentelemetry.io/collector/config/configtelemetry v0.86.0
@@ -42,6 +44,8 @@ require (
 	github.com/andybalholm/brotli v1.0.5 // indirect
 	github.com/atotto/clipboard v0.1.4 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
+	github.com/bahlo/generic-list-go v0.2.0 // indirect
+	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/containerd/console v1.0.4-0.20230313162750-1ae8d489ac81 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
@@ -64,6 +68,7 @@ require (
 	github.com/knadh/koanf/providers/confmap v0.1.0 // indirect
 	github.com/knadh/koanf/v2 v2.0.1 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
+	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-isatty v0.0.19 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
