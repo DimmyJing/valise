@@ -40,12 +40,36 @@ type jsonInfo struct {
 
 var errInvalidField = fmt.Errorf("invalid field")
 
-func generateFromField(field protoreflect.FieldDescriptor) *jsonInfo { //nolint:funlen,cyclop
+func generateFromField(field protoreflect.FieldDescriptor, nested bool) *jsonInfo { //nolint:funlen,cyclop
 	//nolint:exhaustruct
 	info := jsonInfo{
 		Title:       field.JSONName(),
 		Description: protoMap[string(field.FullName())],
 		optional:    field.HasOptionalKeyword(),
+	}
+
+	if nested {
+		info.Title = ""
+		info.Description = ""
+	}
+
+	if field.IsList() && !nested {
+		info.Type = "array"
+		info.Items = generateFromField(field, true)
+
+		return &info
+	}
+
+	if field.IsMap() {
+		if field.MapKey().Kind() != protoreflect.StringKind {
+			log.Panic(fmt.Errorf("invalid map key type %T: %w", field.MapKey().Kind(), errInvalidField))
+		}
+
+		//nolint:goconst
+		info.Type = "object"
+		info.AdditionalProperties = generateFromField(field.MapValue(), false)
+
+		return &info
 	}
 
 	switch field.Kind() {
@@ -83,12 +107,10 @@ func generateFromField(field protoreflect.FieldDescriptor) *jsonInfo { //nolint:
 	case protoreflect.BytesKind:
 		info.Type = "string"
 	case protoreflect.MessageKind:
-		//nolint:goconst
 		info.Type = "object"
 
-		typ, title, description, optional := info.Type, info.Title, info.Description, info.optional
+		title, description, optional := info.Title, info.Description, info.optional
 		info = *generateFromMessage(field.Message())
-		info.Type = typ
 		info.Title = title
 		info.optional = optional
 
@@ -99,38 +121,17 @@ func generateFromField(field protoreflect.FieldDescriptor) *jsonInfo { //nolint:
 		log.Panic(fmt.Errorf("group kind is not supported: %w", errInvalidField))
 	}
 
-	if field.IsMap() {
-		if field.MapKey().Kind() != protoreflect.StringKind {
-			log.Panic(fmt.Errorf("invalid map key type %T: %w", field.MapKey().Kind(), errInvalidField))
-		}
-
-		info.Type = "object"
-		info.AdditionalProperties = generateFromField(field.MapValue())
-	}
-
-	if field.IsList() {
-		info.Type = "array"
-		info.Items = generateFromField(field)
-	}
-
 	return &info
 }
 
 //nolint:gochecknoglobals
 var wellKnownTypes = map[string]bool{
-	"BoolValue":   true,
-	"BytesValue":  true,
-	"DoubleValue": true,
-	"Duration":    true,
-	"FloatValue":  true,
-	"Int32Value":  true,
-	"Int64Value":  true,
-	"ListValue":   true,
-	"StringValue": true,
-	"Struct":      true,
-	"UInt32Value": true,
-	"UInt64Value": true,
-	"Value":       true,
+	"Duration":  true,
+	"Empty":     true,
+	"NullValue": true,
+	"Struct":    true,
+	"Timestamp": true,
+	"Value":     true,
 }
 
 func generateFromMessage(message protoreflect.MessageDescriptor) *jsonInfo { //nolint:funlen,cyclop
@@ -148,7 +149,6 @@ func generateFromMessage(message protoreflect.MessageDescriptor) *jsonInfo { //n
 
 	if wellKnownTypes[string(message.Name())] && message.ParentFile().Package() == "google.protobuf" {
 		info.AdditionalProperties = nil
-		processed := true
 
 		switch message.Name() {
 		case "Duration":
@@ -167,15 +167,9 @@ func generateFromMessage(message protoreflect.MessageDescriptor) *jsonInfo { //n
 			info.Format = "date-time"
 		case "Value":
 			info.Type = ""
-		default:
-			processed = false
 		}
 
-		if processed {
-			return &info
-		} else {
-			info.AdditionalProperties = &falseVal
-		}
+		return &info
 	}
 
 	msgOneOfs := message.Oneofs()
@@ -202,7 +196,7 @@ func generateFromMessage(message protoreflect.MessageDescriptor) *jsonInfo { //n
 	for i := 0; i < fields.Len(); i++ {
 		field := fields.Get(i)
 
-		fieldInfo := generateFromField(field)
+		fieldInfo := generateFromField(field, false)
 		if !fieldInfo.optional && !oneOfNames[fieldInfo.Title] {
 			info.Required = append(info.Required, fieldInfo.Title)
 		}
