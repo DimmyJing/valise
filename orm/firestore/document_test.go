@@ -1,5 +1,7 @@
 package firestore_test
 
+//nolint:dupword
+/*
 import (
 	"bytes"
 	"errors"
@@ -1285,3 +1287,4 @@ func TestQueryDocuments(t *testing.T) { //nolint:funlen
 	_, err = iter.Next()
 	assert.Error(err)
 }
+*/

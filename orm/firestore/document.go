@@ -7,6 +7,7 @@ import (
 	"cloud.google.com/go/firestore"
 	"github.com/DimmyJing/valise/attr"
 	"github.com/DimmyJing/valise/ctx"
+	"google.golang.org/protobuf/proto"
 )
 
 type documentInterface interface {
@@ -16,7 +17,7 @@ type documentInterface interface {
 	getClient() *firestore.Client
 }
 
-type Doc[D any] struct {
+type Doc[D proto.Message] struct {
 	Ref    *firestore.DocumentRef
 	Client *firestore.Client
 }

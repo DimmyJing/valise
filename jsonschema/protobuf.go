@@ -126,11 +126,10 @@ func generateFromField(field protoreflect.FieldDescriptor, nested bool) *jsonInf
 
 //nolint:gochecknoglobals
 var wellKnownTypes = map[string]bool{
+	"Timestamp": true,
 	"Duration":  true,
 	"Empty":     true,
-	"NullValue": true,
 	"Struct":    true,
-	"Timestamp": true,
 	"Value":     true,
 }
 
@@ -156,9 +155,6 @@ func generateFromMessage(message protoreflect.MessageDescriptor) *jsonInfo { //n
 			info.Format = "duration"
 		case "Empty":
 			info.AdditionalProperties = &falseVal
-		case "NullValue":
-			//nolint:goconst
-			info.Type = "null"
 		case "Struct":
 			trueVal := true
 			info.AdditionalProperties = &trueVal
