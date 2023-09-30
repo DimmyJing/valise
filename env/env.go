@@ -66,6 +66,43 @@ func decrypt(key []byte, val string) string {
 	return string(plainText)
 }
 
+func GetEnvFromJSON(envJSON []byte, key []byte, envKey string) (string, error) {
+	envVars := make(map[string]string)
+
+	err := json.Unmarshal(envJSON, &envVars)
+	if err != nil {
+		return "", fmt.Errorf("error umarshalling env json: %w", err)
+	}
+
+	if val, found := envVars[envKey]; found {
+		return decrypt(key, val), nil
+	}
+
+	return "", nil
+}
+
+func SetEnvFromJSON(envJSON []byte, key []byte, envKey string, envVal string, enc bool) ([]byte, error) {
+	envVars := make(map[string]string)
+
+	err := json.Unmarshal(envJSON, &envVars)
+	if err != nil {
+		return nil, fmt.Errorf("error umarshalling env json: %w", err)
+	}
+
+	if enc {
+		envVars[envKey] = encrypt(key, envVal)
+	} else {
+		envVars[envKey] = envVal
+	}
+
+	newEnvJSON, err := json.MarshalIndent(envVars, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("error marshalling env json: %w", err)
+	}
+
+	return newEnvJSON, nil
+}
+
 const minDirLen = 5
 
 func findFile(filename string) []string {
@@ -88,7 +125,7 @@ func findFile(filename string) []string {
 
 var errKeyNotFound = errors.New("key not found")
 
-func getKey() ([]byte, error) {
+func GetKey() ([]byte, error) {
 	if key, found := os.LookupEnv("KEY"); found {
 		res, err := hex.DecodeString(key)
 		if err != nil {
@@ -115,19 +152,10 @@ func getKey() ([]byte, error) {
 	return []byte{}, errKeyNotFound
 }
 
-var errInvalidKey = errors.New(
-	"failed to get env decryption key, there must either be a .key file in the root of the project or a KEY env var",
-)
-
-func Init(envJSON []byte) error {
-	secretKey, err := getKey()
-	if err != nil {
-		return errInvalidKey
-	}
-
+func Init(envJSON []byte, secretKey []byte) error {
 	envVars := make(map[string]string)
 
-	err = json.Unmarshal(envJSON, &envVars)
+	err := json.Unmarshal(envJSON, &envVars)
 	if err != nil {
 		return fmt.Errorf("error umarshalling env json: %w", err)
 	}

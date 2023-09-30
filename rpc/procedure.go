@@ -2,14 +2,12 @@ package rpc
 
 import (
 	"net/http"
-
-	"github.com/DimmyJing/valise/ctx"
-	"google.golang.org/protobuf/proto"
 )
 
 type Procedure struct {
 	middlewares []func(http.Handler) http.Handler
-	handler     func(proto.Message, ctx.Context) (proto.Message, error)
+	// func(proto.Message, ctx.Context) (proto.Message, error)
+	handler     any
 	method      string
 	tags        []string
 	description string
@@ -29,7 +27,7 @@ func (p *Procedure) With(middleware func(http.Handler) http.Handler) *Procedure 
 	}
 }
 
-func (p *Procedure) Get(handler func(proto.Message, ctx.Context) (proto.Message, error)) *Procedure {
+func (p *Procedure) Get(handler any) *Procedure {
 	return &Procedure{
 		middlewares: p.middlewares,
 		handler:     handler,
@@ -39,7 +37,7 @@ func (p *Procedure) Get(handler func(proto.Message, ctx.Context) (proto.Message,
 	}
 }
 
-func (p *Procedure) Post(handler func(proto.Message, ctx.Context) (proto.Message, error)) *Procedure {
+func (p *Procedure) Post(handler any) *Procedure {
 	return &Procedure{
 		middlewares: p.middlewares,
 		handler:     handler,
@@ -49,7 +47,7 @@ func (p *Procedure) Post(handler func(proto.Message, ctx.Context) (proto.Message
 	}
 }
 
-func (p *Procedure) Put(handler func(proto.Message, ctx.Context) (proto.Message, error)) *Procedure {
+func (p *Procedure) Put(handler any) *Procedure {
 	return &Procedure{
 		middlewares: p.middlewares,
 		handler:     handler,
@@ -59,7 +57,7 @@ func (p *Procedure) Put(handler func(proto.Message, ctx.Context) (proto.Message,
 	}
 }
 
-func (p *Procedure) Delete(handler func(proto.Message, ctx.Context) (proto.Message, error)) *Procedure {
+func (p *Procedure) Delete(handler any) *Procedure {
 	return &Procedure{
 		middlewares: p.middlewares,
 		handler:     handler,

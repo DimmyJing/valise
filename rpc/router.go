@@ -114,14 +114,17 @@ func (r *Router) Flush() { //nolint:funlen,gocognit,cyclop
 		newPath := "/" + strings.Join(r.path, "/") + "/" + path
 		method := proc.method
 
+		protoHandlerFn := reflect.ValueOf(proc.handler)
+		protoHandlerFnType := protoHandlerFn.Type()
+
 		//nolint:forcetypeassert
-		inputMsg := reflect.Zero(reflect.TypeOf(method).In(0)).Interface().(proto.Message)
+		inputMsg := reflect.Zero(protoHandlerFnType.In(0)).Interface().(proto.Message)
 		inputReflect := inputMsg.ProtoReflect()
 		inputFields := inputMsg.ProtoReflect().Descriptor().Fields()
 		inputIsList := make(map[string]bool)
 
 		//nolint:forcetypeassert
-		outputMsg := reflect.Zero(reflect.TypeOf(method).Out(0)).Interface().(proto.Message)
+		outputMsg := reflect.Zero(protoHandlerFnType.Out(0)).Interface().(proto.Message)
 
 		for i := 0; i < inputFields.Len(); i++ {
 			field := inputFields.Get(i)
@@ -196,9 +199,23 @@ func (r *Router) Flush() { //nolint:funlen,gocognit,cyclop
 				}
 			}
 
-			output, err := proc.handler(inputMsg, ctx.FromHTTP(writer, request))
-			if err != nil {
-				log.Panic(err)
+			out := protoHandlerFn.Call([]reflect.Value{
+				reflect.ValueOf(inputMsg),
+				reflect.ValueOf(ctx.FromHTTP(writer, request)),
+			})
+			if !out[1].IsNil() {
+				if err, ok := out[1].Interface().(error); ok {
+					log.Panic(err)
+				} else {
+					//nolint:goerr113
+					log.Panic(fmt.Errorf("non-error value returned from handler: %v", out[1].Interface()))
+				}
+			}
+
+			output, ok := out[0].Interface().(proto.Message)
+			if !ok {
+				//nolint:goerr113
+				log.Panic(fmt.Errorf("non-proto message returned from handler: %v", out[0].Interface()))
 			}
 
 			if result, err := protojson.Marshal(output); err == nil {

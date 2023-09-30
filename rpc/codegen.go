@@ -33,7 +33,7 @@ func createStub(
 	}
 
 	operation := fmt.Sprintf(
-		"%sexport type %s = {\n  input: %sInput,\n  output: %sOutput,\n  method: %s,\n  path: %s,\n}\n",
+		"%sexport type %s = {\n  input: %sInput,\n  output: %sOutput,\n  method: \"%s\",\n  path: \"%s\",\n}\n",
 		jsonschema.FormatComment(description), pathName, pathName, pathName, method, path,
 	)
 
@@ -186,8 +186,10 @@ func (r *Router) CodeGen(path string) error { //nolint:cyclop
 			builder.WriteString("\n\n")
 		}
 
+		fileContent := []byte(strings.TrimSpace(builder.String()))
+
 		//nolint:gosec,gomnd
-		err := os.WriteFile(filepath.Join(path, key+".ts"), []byte(builder.String()), 0o644)
+		err := os.WriteFile(filepath.Join(path, key+".ts"), fileContent, 0o644)
 		if err != nil {
 			return fmt.Errorf("failed to write file: %w", err)
 		}

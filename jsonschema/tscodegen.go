@@ -6,8 +6,6 @@ import (
 	"strings"
 )
 
-var errInvalidJSON = fmt.Errorf("invalid jsoninfo")
-
 func JSONSchemaToTS(inp *JSONInfo, prefix string) (string, error) {
 	types, err := jsonSchemaToTS(*inp)
 	if err != nil {
@@ -100,8 +98,8 @@ func jsonSchemaToTS(input JSONInfo) (string, error) { //nolint:funlen,cyclop,goc
 		return "null", nil
 	case "object":
 		//nolint:nestif
-		if prop, ok := input.AdditionalProperties.(bool); ok {
-			if prop {
+		if prop, ok := input.AdditionalProperties.(*bool); ok {
+			if *prop {
 				return "Record<string, any>", nil
 			}
 
@@ -145,5 +143,5 @@ func jsonSchemaToTS(input JSONInfo) (string, error) { //nolint:funlen,cyclop,goc
 		}
 	}
 
-	return "", fmt.Errorf("invalid schema: %w", errInvalidSchema)
+	return "", fmt.Errorf("invalid type %s: %w", input.Type, errInvalidSchema)
 }
