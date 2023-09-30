@@ -82,10 +82,16 @@ func callDataFrom[Doc any, Data any](doc *Doc, snap *firestore.DocumentSnapshot)
 	return res[0].Interface().(Data), nil
 }
 
-func (d *Doc[D]) DataFrom(snap *firestore.DocumentSnapshot) (D, error) { //nolint:ireturn
+var ErrDataDoesNotExist = errors.New("data does not exist")
+
+func (d *Doc[D]) DataFrom(snap *firestore.DocumentSnapshot) (D, error) { //nolint:ireturn,funlen
 	data := *new(D)
+	if !snap.Exists() {
+		return data, ErrDataDoesNotExist
+	}
 
 	rawData := snap.Data()
+
 	needMigration := false
 
 	var err error
