@@ -49,7 +49,7 @@ func transformStruct(data proto.Message, create bool) (map[string]any, error) {
 
 	resMap, ok := res.(map[string]any)
 	if !ok {
-		return nil, fmt.Errorf("failed to convert message to map %v: %w", data, errInvalidStruct)
+		return nil, fmt.Errorf("failed to convert message to map %v, got %v - %T: %w", data, res, res, errInvalidStruct)
 	}
 
 	if updatedAt, ok := resMap["updatedAt"]; ok {
@@ -84,7 +84,7 @@ func callDataFrom[Doc any, Data any](doc *Doc, snap *firestore.DocumentSnapshot)
 
 var ErrDataDoesNotExist = errors.New("data does not exist")
 
-func (d *Doc[D]) DataFrom(snap *firestore.DocumentSnapshot) (D, error) { //nolint:ireturn,funlen
+func (d *Doc[D]) DataFrom(snap *firestore.DocumentSnapshot) (D, error) { //nolint:ireturn
 	data := *new(D)
 	if !snap.Exists() {
 		return data, ErrDataDoesNotExist
@@ -111,18 +111,15 @@ func (d *Doc[D]) DataFrom(snap *firestore.DocumentSnapshot) (D, error) { //nolin
 		}
 	*/
 
+	//nolint:nestif
 	if !needMigration {
 		msg := data.ProtoReflect().New()
-
-		err := jsonschema.AnyToMessage(rawData, msg)
-		if err == nil {
-			return data, nil
-		}
-
-		if dat, ok := msg.Interface().(D); ok {
-			data = dat
-		} else {
-			return data, fmt.Errorf("failed to convert data to D: %w", err)
+		if err := jsonschema.AnyToMessage(rawData, msg); err == nil {
+			if dat, ok := msg.Interface().(D); ok {
+				return dat, nil
+			} else {
+				return data, fmt.Errorf("failed to convert data to D: %w", err)
+			}
 		}
 	} else {
 		err = errMissingMigration

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -46,8 +47,8 @@ func ValueToAny(value protoreflect.Value, fieldDesc protoreflect.FieldDescriptor
 	return nil
 }
 
-func MessageToAny(message protoreflect.Message) any {
-	res := make(map[any]any)
+func MessageToAny(message protoreflect.Message) any { //nolint:cyclop
+	res := make(map[string]any)
 
 	messageDesc := message.Descriptor()
 	messageFullName := messageDesc.FullName()
@@ -64,6 +65,20 @@ func MessageToAny(message protoreflect.Message) any {
 			return msg.AsMap()
 		case *structpb.Value:
 			return msg.AsInterface()
+		case nil:
+			name := messageFullName.Name()
+			switch name {
+			case "Timestamp":
+				return time.Time{}
+			case "Duration":
+				return time.Duration(0)
+			case "Empty":
+				return make(map[string]any)
+			case "Struct":
+				return make(map[string]any)
+			case "Value":
+				return nil
+			}
 		}
 	}
 
@@ -71,11 +86,11 @@ func MessageToAny(message protoreflect.Message) any {
 		return res
 	}
 
-	message.Range(func(fd protoreflect.FieldDescriptor, v protoreflect.Value) bool {
-		res[fd.JSONName()] = ValueToAny(v, fd)
-
-		return true
-	})
+	fields := message.Descriptor().Fields()
+	for i := 0; i < fields.Len(); i++ {
+		fd := fields.Get(i)
+		res[fd.JSONName()] = ValueToAny(message.Get(fd), fd)
+	}
 
 	return res
 }
@@ -119,7 +134,6 @@ func AnyToRepeated( //nolint:funlen,gocognit,cyclop
 			return fmt.Errorf("input is not list %v: %w", input, errInvalidMessage)
 		}
 
-		//nolint:nestif
 		if fieldDesc.Kind() == protoreflect.MessageKind {
 			for _, v := range inp {
 				valEl := val.NewElement()
@@ -129,9 +143,7 @@ func AnyToRepeated( //nolint:funlen,gocognit,cyclop
 					return fmt.Errorf("failed to convert list element %v: %w", v, err)
 				}
 
-				if valEl.IsValid() {
-					val.Append(valEl)
-				}
+				val.Append(valEl)
 			}
 		} else {
 			for _, v := range inp {
@@ -140,9 +152,7 @@ func AnyToRepeated( //nolint:funlen,gocognit,cyclop
 					return fmt.Errorf("failed to convert list element scalar %v: %w", v, err)
 				}
 
-				if valEl.IsValid() {
-					val.Append(valEl)
-				}
+				val.Append(valEl)
 			}
 		}
 
@@ -156,7 +166,6 @@ func AnyToRepeated( //nolint:funlen,gocognit,cyclop
 		isMsg := fieldDesc.Kind() == protoreflect.MessageKind
 
 		for key, valEl := range inp {
-			//nolint:nestif
 			if isMsg {
 				valEl := val.NewValue()
 
@@ -165,18 +174,14 @@ func AnyToRepeated( //nolint:funlen,gocognit,cyclop
 					return fmt.Errorf("failed to convert map element %v: %w", valEl, err)
 				}
 
-				if valEl.IsValid() {
-					val.Set(protoreflect.ValueOfString(key).MapKey(), valEl)
-				}
+				val.Set(protoreflect.ValueOfString(key).MapKey(), valEl)
 			} else {
 				valEl, err := AnyToScalar(valEl, fieldDesc)
 				if err != nil {
 					return fmt.Errorf("failed to convert map element scalar %v: %w", valEl, err)
 				}
 
-				if valEl.IsValid() {
-					val.Set(protoreflect.ValueOfString(key).MapKey(), valEl)
-				}
+				val.Set(protoreflect.ValueOfString(key).MapKey(), valEl)
 			}
 		}
 	}
@@ -193,23 +198,30 @@ func AnyToMessage(input any, msg protoreflect.Message) error { //nolint:cyclop,f
 		switch messageFullName.Name() {
 		case "Timestamp":
 			if inp, ok := input.(time.Time); ok {
-				msg.SetUnknown(timestamppb.New(inp).ProtoReflect().GetUnknown())
+				if inp.IsZero() {
+					newTime := &timestamppb.Timestamp{
+						Seconds: -62135596800,
+						Nanos:   0,
+					}
+					proto.Merge(msg.Interface(), newTime)
+				} else {
+					proto.Merge(msg.Interface(), timestamppb.New(inp))
+				}
 
 				return nil
 			} else {
 				return fmt.Errorf("input is not time.Time %v: %w", input, errInvalidMessage)
 			}
-		//nolint:goconst
 		case "Duration":
 			if inp, ok := input.(time.Duration); ok {
-				msg.SetUnknown(durationpb.New(inp).ProtoReflect().GetUnknown())
+				proto.Merge(msg.Interface(), durationpb.New(inp))
 
 				return nil
 			} else {
 				return fmt.Errorf("input is not time.Duration %v: %w", input, errInvalidMessage)
 			}
 		case "Empty":
-			msg.SetUnknown((&emptypb.Empty{}).ProtoReflect().GetUnknown())
+			proto.Merge(msg.Interface(), &emptypb.Empty{})
 
 			return nil
 		case "Struct":
@@ -223,7 +235,7 @@ func AnyToMessage(input any, msg protoreflect.Message) error { //nolint:cyclop,f
 				return fmt.Errorf("failed to convert struct %v: %w", inp, err)
 			}
 
-			msg.SetUnknown(res.ProtoReflect().GetUnknown())
+			proto.Merge(msg.Interface(), res)
 
 			return nil
 		case "Value":
@@ -232,7 +244,7 @@ func AnyToMessage(input any, msg protoreflect.Message) error { //nolint:cyclop,f
 				return fmt.Errorf("failed to convert value %v: %w", input, err)
 			}
 
-			msg.SetUnknown(res.ProtoReflect().GetUnknown())
+			proto.Merge(msg.Interface(), res)
 
 			return nil
 		}
@@ -247,42 +259,44 @@ func AnyToMessage(input any, msg protoreflect.Message) error { //nolint:cyclop,f
 
 	oneOfs := map[int]bool{}
 
-	msg.Range(func(fieldDesc protoreflect.FieldDescriptor, val protoreflect.Value) bool {
+	fields := messageDesc.Fields()
+	for i := 0; i < fields.Len(); i++ {
+		fieldDesc := fields.Get(i)
+
 		rawInp, ok := inp[fieldDesc.JSONName()]
 		if !ok {
-			return true
+			continue
 		}
 
 		switch {
 		case fieldDesc.IsList(), fieldDesc.IsMap():
+			val := msg.NewField(fieldDesc)
 			err = AnyToRepeated(rawInp, val, fieldDesc)
+			msg.Set(fieldDesc, val)
 		default:
 			if od := fieldDesc.ContainingOneof(); od != nil {
 				if oneOfs[od.Index()] {
-					err = fmt.Errorf("duplicate oneof field %s: %w", fieldDesc.JSONName(), errInvalidMessage)
+					return fmt.Errorf("duplicate oneof field %s: %w", fieldDesc.JSONName(), errInvalidMessage)
 				}
+
 				oneOfs[od.Index()] = true
 			}
 
 			if fieldDesc.Kind() == protoreflect.MessageKind {
 				val := msg.NewField(fieldDesc)
 				err = AnyToMessage(rawInp, val.Message())
+				msg.Set(fieldDesc, val)
 			} else {
 				var val protoreflect.Value
 				val, err = AnyToScalar(rawInp, fieldDesc)
-				if val.IsValid() {
-					msg.Set(fieldDesc, val)
-				}
+				msg.Set(fieldDesc, val)
 			}
 		}
+
 		if err != nil {
-			err = fmt.Errorf("failed to convert field %s-%v to message: %w", fieldDesc.JSONName(), rawInp, err)
-
-			return false
+			return fmt.Errorf("failed to convert field %s-%v to message: %w", fieldDesc.JSONName(), rawInp, err)
 		}
-
-		return true
-	})
+	}
 
 	if err != nil {
 		return err

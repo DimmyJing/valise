@@ -205,25 +205,31 @@ func (r *Router) Flush() { //nolint:funlen,gocognit,cyclop
 			})
 			if !out[1].IsNil() {
 				if err, ok := out[1].Interface().(error); ok {
-					log.Panic(err)
+					log.Panic(NewHTTPError(http.StatusInternalServerError, err))
 				} else {
 					//nolint:goerr113
-					log.Panic(fmt.Errorf("non-error value returned from handler: %v", out[1].Interface()))
+					log.Panic(NewHTTPError(http.StatusInternalServerError,
+						fmt.Errorf("non-error value returned from handler: %v", out[1].Interface()),
+					))
 				}
 			}
 
 			output, ok := out[0].Interface().(proto.Message)
 			if !ok {
 				//nolint:goerr113
-				log.Panic(fmt.Errorf("non-proto message returned from handler: %v", out[0].Interface()))
+				log.Panic(NewHTTPError(
+					http.StatusInternalServerError, fmt.Errorf("non-proto message returned from handler: %v", out[0].Interface()),
+				))
 			}
 
-			if result, err := protojson.Marshal(output); err == nil {
+			//nolint:exhaustruct
+			opt := protojson.MarshalOptions{EmitUnpopulated: true}
+			if result, err := opt.Marshal(output); err == nil {
 				writer.Header().Set("Content-Type", "application/json")
 
 				_, err = writer.Write(result)
 				if err != nil {
-					log.Panic(err)
+					log.Panic(NewHTTPError(http.StatusInternalServerError, err))
 				}
 			} else {
 				log.Panic(NewHTTPError(http.StatusInternalServerError, fmt.Errorf("error marshaling output: %w", err)))

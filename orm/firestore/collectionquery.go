@@ -2,6 +2,7 @@ package firestore
 
 import (
 	"fmt"
+	"reflect"
 
 	"cloud.google.com/go/firestore"
 	"github.com/DimmyJing/valise/attr"
@@ -173,6 +174,38 @@ func (c *Collection[Doc, D]) Query(ctx ctx.Context, queryFns ...func(query Query
 	}
 
 	ctx.SetAttributes(attr.Int("count", len(res)))
+
+	return res, nil
+}
+
+func (c *Collection[Doc, D]) GetAll(ctx ctx.Context, documents []Doc) ([]DocSnap[Doc, D], error) {
+	ctx, end := ctx.Nested("getAll", attr.String("path", c.Ref().Path))
+	defer end()
+
+	docRefs := make([]*firestore.DocumentRef, len(documents))
+	for i, doc := range documents {
+		//nolint:forcetypeassert
+		docRefs[i] = reflect.ValueOf(doc).FieldByName("Ref").Interface().(*firestore.DocumentRef)
+	}
+
+	res := make([]DocSnap[Doc, D], 0)
+
+	snaps, err := c.client.GetAll(ctx, docRefs)
+	if err != nil {
+		return nil, ctx.Fail(err)
+	}
+
+	for idx, snap := range snaps {
+		data, err := callDataFrom[Doc, D](&documents[idx], snap)
+		if err != nil {
+			return nil, ctx.Fail(err)
+		}
+
+		res[idx] = DocSnap[Doc, D]{
+			Doc:  documents[idx],
+			Data: data,
+		}
+	}
 
 	return res, nil
 }

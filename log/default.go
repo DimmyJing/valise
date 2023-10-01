@@ -119,25 +119,25 @@ func FatalfContext(ctx context.Context, msg string, args ...any) {
 }
 
 func Panic(err error, args ...attr.Attr) {
-	logger.LogHelper(context.Background(), LevelFatal, err, 0, args...)
+	logger.LogHelper(context.Background(), LevelFatal, err.Error(), 0, args...)
 	panic(err)
 }
 
 func Panicf(msg string, args ...any) {
 	//nolint:goerr113
 	err := fmt.Errorf(msg, args...)
-	logger.LogHelper(context.Background(), LevelFatal, err, 0)
+	logger.LogHelper(context.Background(), LevelFatal, err.Error(), 0)
 	panic(err)
 }
 
 func PanicContext(ctx context.Context, err error, args ...attr.Attr) {
-	logger.LogHelper(ctx, LevelFatal, err, 0, args...)
+	logger.LogHelper(ctx, LevelFatal, err.Error(), 0, args...)
 	panic(err)
 }
 
 func PanicfContext(ctx context.Context, msg string, args ...any) {
 	//nolint:goerr113
 	err := fmt.Errorf(msg, args...)
-	logger.LogHelper(ctx, LevelFatal, err, 0)
+	logger.LogHelper(ctx, LevelFatal, err.Error(), 0)
 	panic(err)
 }

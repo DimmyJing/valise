@@ -107,7 +107,8 @@ const minDirLen = 5
 
 func findFile(filename string) []string {
 	candidates := []string{}
-	_, b, _, _ := runtime.Caller(0)
+	//nolint:gomnd
+	_, b, _, _ := runtime.Caller(2)
 	dir := filepath.Dir(b)
 
 	for {

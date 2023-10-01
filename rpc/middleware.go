@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -57,6 +58,8 @@ func ErrorMiddleware(next http.Handler) http.Handler {
 					writer.WriteHeader(httpErr.Code)
 				} else {
 					writer.WriteHeader(http.StatusInternalServerError)
+
+					ctx.Error(err.Error(), attr.String("stack", string(debug.Stack())))
 				}
 				result, jsonError := json.Marshal(struct {
 					Error string `json:"error"`
