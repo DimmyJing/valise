@@ -161,16 +161,27 @@ func (c *Collection[Doc, D]) Query(ctx ctx.Context, queryFns ...func(query Query
 	ctx, end := ctx.Nested("queryDocuments", attr.String("path", c.Ref().Path))
 	defer end()
 
+	query := c.Ref().Query
+	for _, queryFn := range queryFns {
+		query = queryFn(query)
+	}
+
+	snaps, err := query.Documents(ctx).GetAll()
+	if err != nil {
+		return nil, ctx.Fail(err)
+	}
+
 	res := make([]DocSnap[Doc, D], 0)
 
-	it := c.QueryIter(ctx, queryFns...)
-	for it.HasNext() {
-		doc, err := it.Next()
+	for _, snap := range snaps {
+		doc := createDocument[Doc](snap.Ref, c.client)
+
+		data, err := callDataFrom[Doc, D](&doc, snap)
 		if err != nil {
 			return nil, ctx.Fail(err)
 		}
 
-		res = append(res, doc)
+		res = append(res, DocSnap[Doc, D]{Doc: doc, Data: data})
 	}
 
 	ctx.SetAttributes(attr.Int("count", len(res)))
@@ -188,7 +199,7 @@ func (c *Collection[Doc, D]) GetAll(ctx ctx.Context, documents []Doc) ([]DocSnap
 		docRefs[i] = reflect.ValueOf(doc).FieldByName("Ref").Interface().(*firestore.DocumentRef)
 	}
 
-	res := make([]DocSnap[Doc, D], 0)
+	res := make([]DocSnap[Doc, D], len(documents))
 
 	snaps, err := c.client.GetAll(ctx, docRefs)
 	if err != nil {
