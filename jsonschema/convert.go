@@ -47,7 +47,7 @@ func ValueToAny(value protoreflect.Value, fieldDesc protoreflect.FieldDescriptor
 	return nil
 }
 
-func MessageToAny(message protoreflect.Message) any { //nolint:cyclop
+func MessageToAny(message protoreflect.Message) any {
 	res := make(map[string]any)
 
 	messageDesc := message.Descriptor()
@@ -56,6 +56,10 @@ func MessageToAny(message protoreflect.Message) any { //nolint:cyclop
 	if messageFullName.Parent() == "google.protobuf" {
 		switch msg := message.Interface().(type) {
 		case *timestamppb.Timestamp:
+			if msg == nil {
+				return time.Time{}
+			}
+
 			return msg.AsTime()
 		case *durationpb.Duration:
 			return msg.AsDuration()
@@ -65,20 +69,6 @@ func MessageToAny(message protoreflect.Message) any { //nolint:cyclop
 			return msg.AsMap()
 		case *structpb.Value:
 			return msg.AsInterface()
-		case nil:
-			name := messageFullName.Name()
-			switch name {
-			case "Timestamp":
-				return time.Time{}
-			case "Duration":
-				return time.Duration(0)
-			case "Empty":
-				return make(map[string]any)
-			case "Struct":
-				return make(map[string]any)
-			case "Value":
-				return nil
-			}
 		}
 	}
 
@@ -212,6 +202,7 @@ func AnyToMessage(input any, msg protoreflect.Message) error { //nolint:cyclop,f
 			} else {
 				return fmt.Errorf("input is not time.Time %v: %w", input, errInvalidMessage)
 			}
+		//nolint:goconst
 		case "Duration":
 			if inp, ok := input.(time.Duration); ok {
 				proto.Merge(msg.Interface(), durationpb.New(inp))
