@@ -178,3 +178,47 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(writer, request.WithContext(ctx.WithUserID(userID)))
 	})
 }
+
+func MaybeAuthMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		cctx := ctx.FromHTTP(writer, request)
+		getUserID := func(ctx ctx.Context) (string, error) {
+			auth := request.Header.Get("Authorization")
+			if auth == "" {
+				return "", NewHTTPError(http.StatusUnauthorized, errNoAuthHeader)
+			}
+			parts := strings.Split(auth, " ")
+			if len(parts) != 2 || parts[0] != "Bearer" {
+				return "", NewHTTPError(
+					http.StatusUnauthorized,
+					fmt.Errorf("%w: authorization header must be bearer token", errInvalidToken),
+				)
+			}
+			token := parts[1]
+			verifier := ctx.TokenVerifier()
+			if verifier == nil {
+				return "", NewHTTPError(http.StatusUnauthorized, errNoTokenVerifier)
+			}
+			res, err := verifier(ctx, token)
+			var userID string
+			if err != nil {
+				if ctx.IsDevelopment() {
+					userID = token
+				} else {
+					return "", NewHTTPError(http.StatusUnauthorized, fmt.Errorf("invalid token: %w", err))
+				}
+			} else {
+				userID = res
+			}
+
+			return userID, nil
+		}
+		userID, err := getUserID(cctx)
+		if err != nil {
+			next.ServeHTTP(writer, request.WithContext(cctx))
+		} else {
+			cctx.SetAttributes(attr.String("userID", userID))
+			next.ServeHTTP(writer, request.WithContext(cctx.WithUserID(userID)))
+		}
+	})
+}
