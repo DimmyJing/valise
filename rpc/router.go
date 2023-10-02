@@ -152,10 +152,12 @@ func (r *Router) Flush() { //nolint:funlen,gocognit,cyclop
 				isFirst := true
 				for key, value := range values {
 					if !isFirst {
-						buf.WriteString(fmt.Sprintf(",\"%s\":", key))
+						buf.WriteString(",")
 					} else {
 						isFirst = false
 					}
+
+					buf.WriteString(fmt.Sprintf("\"%s\":", key))
 
 					if val, ok := inputIsList[key]; ok && val {
 						valBuf, err := json.Marshal(value)
@@ -185,7 +187,9 @@ func (r *Router) Flush() { //nolint:funlen,gocognit,cyclop
 
 				err := protojson.Unmarshal(buf.Bytes(), inputMsg)
 				if err != nil {
-					log.Panic(NewHTTPError(http.StatusBadRequest, fmt.Errorf("error unmarshaling input: %w", err)))
+					log.Panic(NewHTTPError(http.StatusBadRequest,
+						fmt.Errorf("error unmarshaling input %v: %w", buf.String(), err)),
+					)
 				}
 			} else {
 				inputBody, err := io.ReadAll(request.Body)
