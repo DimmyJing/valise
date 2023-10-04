@@ -12,6 +12,8 @@ import (
 	"github.com/DimmyJing/valise/attr"
 	"github.com/DimmyJing/valise/ctx"
 	"github.com/DimmyJing/valise/jsonschema"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -152,6 +154,10 @@ func (d *Doc[D]) Data(ctx ctx.Context) (D, error) { //nolint:ireturn
 	defer end()
 
 	if snap, err := d.Ref.Get(ctx); err != nil {
+		if status.Code(err) == codes.NotFound {
+			return *new(D), nil
+		}
+
 		return *new(D), fmt.Errorf("error getting document snapshot: %w", err)
 	} else {
 		return d.DataFrom(snap)
