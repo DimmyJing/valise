@@ -95,7 +95,7 @@ var (
 	errBadInput         = fmt.Errorf("bad input")
 )
 
-func (r *Router) Flush() error { //nolint:funlen,gocognit,cyclop
+func (r *Router) Flush() error { //nolint:funlen,gocognit,cyclop,gocyclo,maintidx
 	for _, router := range r.routers {
 		path := make([]string, len(r.path)+1)
 		copy(path, r.path)
@@ -125,8 +125,27 @@ func (r *Router) Flush() error { //nolint:funlen,gocognit,cyclop
 		inputIsList := map[string]bool{}
 
 		for i := 0; i < inputMsg.NumField(); i++ {
-			if inputMsg.Field(i).Type.Kind() == reflect.Slice || inputMsg.Field(i).Type.Kind() == reflect.Array {
-				inputIsList[inputMsg.Field(i).Name] = true
+			field := inputMsg.Field(i)
+			if !field.IsExported() {
+				continue
+			}
+
+			//nolint:nestif
+			if field.Type.Kind() == reflect.Slice || field.Type.Kind() == reflect.Array {
+				fieldName := strings.ToLower(string(field.Name[0])) + field.Name[1:]
+
+				if jsonTag, found := field.Tag.Lookup("json"); found {
+					splitTags := strings.Split(jsonTag, ",")
+					if len(splitTags) > 0 {
+						if splitTags[0] == "-" && len(splitTags) == 1 {
+							continue
+						} else if splitTags[0] != "" {
+							fieldName = splitTags[0]
+						}
+					}
+				}
+
+				inputIsList[fieldName] = true
 			}
 		}
 

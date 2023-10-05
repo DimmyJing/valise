@@ -73,7 +73,7 @@ func processPath(path openAPIPathItem, pathString string) (string, error) { //no
 
 	operationDescription := operation.Description
 
-	requestSchema := jsonschema.JSONSchemaFalse
+	var requestSchema jsonschema.JSONSchema
 
 	//nolint:nestif
 	if method == "get" || method == "delete" {
@@ -86,6 +86,7 @@ func processPath(path openAPIPathItem, pathString string) (string, error) { //no
 
 		requestSchema.Type = "object"
 		requestSchema.Properties = orderedmap.New[string, *jsonschema.JSONSchema]()
+		requestSchema.AdditionalProperties = &jsonschema.JSONSchemaFalse
 
 		for _, param := range params {
 			schema := param.Schema

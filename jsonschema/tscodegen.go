@@ -92,7 +92,7 @@ func jsonSchemaToTS(input JSONSchema) (string, error) { //nolint:funlen,cyclop,g
 		return "null", nil
 	case "object":
 		//nolint:nestif
-		if input.AdditionalProperties.boolean != nil {
+		if input.AdditionalProperties != nil && input.AdditionalProperties.boolean != nil {
 			if *input.AdditionalProperties.boolean {
 				return "Record<string, any>", nil
 			}

@@ -155,8 +155,7 @@ func convertType(value reflect.Type) (*JSONSchema, error) { //nolint:funlen,goco
 				}
 			}
 
-			//nolint:exhaustruct
-			schema.AdditionalProperties = &JSONSchema{boolean: new(bool)}
+			schema.AdditionalProperties = &JSONSchemaFalse
 		}
 	case reflect.Invalid, reflect.Uintptr, reflect.Complex64, reflect.Complex128,
 		reflect.Chan, reflect.Func, reflect.UnsafePointer:
