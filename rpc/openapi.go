@@ -1,11 +1,13 @@
 package rpc
 
 import (
+	"fmt"
+	"reflect"
+	"slices"
 	"strings"
 
 	"github.com/DimmyJing/valise/jsonschema"
 	orderedmap "github.com/wk8/go-ordered-map/v2"
-	"google.golang.org/protobuf/proto"
 )
 
 type openAPIObject struct {
@@ -58,7 +60,7 @@ type openAPIRequestBody struct {
 }
 
 type openAPIMediaType struct {
-	Schema jsonschema.JSONInfo `json:"schema"`
+	Schema jsonschema.JSONSchema `json:"schema"`
 }
 
 type openAPIResponse struct {
@@ -68,20 +70,25 @@ type openAPIResponse struct {
 
 func (o *openAPIObject) addOperation( //nolint:funlen
 	path string,
-	input proto.Message,
-	output proto.Message,
+	input reflect.Type,
+	output reflect.Type,
 	method string,
 	description string,
 	tags []string,
-) {
+) error {
+	outSchema, err := jsonschema.AnyToSchema(output)
+	if err != nil {
+		return fmt.Errorf("failed to generate schema for output: %w", err)
+	}
+
 	operation := openAPIOperation{
 		Tags:        tags,
 		Description: description,
 		Responses: map[string]openAPIResponse{
 			"200": {
-				Description: jsonschema.GetComment(output),
+				// TODO: Description: jsonschema.GetComment(output),
 				Content: map[string]openAPIMediaType{
-					"application/json": {Schema: *jsonschema.GenerateSchema(output)},
+					"application/json": {Schema: *outSchema},
 				},
 			},
 		},
@@ -96,18 +103,22 @@ func (o *openAPIObject) addOperation( //nolint:funlen
 
 	method = strings.ToLower(method)
 
+	inputSchema, err := jsonschema.AnyToSchema(input)
+	if err != nil {
+		return fmt.Errorf("failed to generate schema for input: %w", err)
+	}
+
 	//nolint:nestif
 	if method == "get" || method == "delete" {
 		parameters := []openAPIParameter{}
 
-		schemas := jsonschema.GenerateSchemas(input)
-		for _, schema := range schemas {
+		for pair := inputSchema.Properties.Oldest(); pair != nil; pair = pair.Next() {
 			parameters = append(parameters, openAPIParameter{
-				openAPIMediaType: openAPIMediaType{Schema: schema.Schema},
-				Name:             schema.Title,
+				openAPIMediaType: openAPIMediaType{Schema: *pair.Value},
+				Name:             pair.Key,
 				In:               "query",
-				Description:      schema.Description,
-				Required:         schema.Required,
+				Description:      pair.Value.Description,
+				Required:         slices.Contains(inputSchema.Required, pair.Key),
 			})
 		}
 
@@ -120,9 +131,9 @@ func (o *openAPIObject) addOperation( //nolint:funlen
 		}
 	} else {
 		bodyOp := &openAPIBodyOperation{openAPIOperation: operation, RequestBody: openAPIRequestBody{
-			Description: jsonschema.GetComment(input),
-			Required:    true,
-			Content:     map[string]openAPIMediaType{"application/json": {Schema: *jsonschema.GenerateSchema(input)}},
+			// TODO: Description: jsonschema.GetComment(input),
+			Required: true,
+			Content:  map[string]openAPIMediaType{"application/json": {Schema: *inputSchema}},
 		}}
 
 		if method == "post" {
@@ -133,4 +144,6 @@ func (o *openAPIObject) addOperation( //nolint:funlen
 	}
 
 	o.Paths.Set(path, schemaPath)
+
+	return nil
 }

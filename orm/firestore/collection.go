@@ -4,7 +4,6 @@ import (
 	"cloud.google.com/go/firestore"
 	"github.com/DimmyJing/valise/attr"
 	"github.com/DimmyJing/valise/ctx"
-	"google.golang.org/protobuf/proto"
 )
 
 type collectionInterface interface {
@@ -13,7 +12,7 @@ type collectionInterface interface {
 	setClient(client *firestore.Client)
 }
 
-type Collection[Doc any, D proto.Message] struct {
+type Collection[Doc any, D any] struct {
 	client    *firestore.Client
 	path      string
 	parentRef *firestore.DocumentRef

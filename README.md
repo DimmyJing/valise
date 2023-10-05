@@ -7,6 +7,7 @@
 + utils
 + otel/internal/transform
 + otel/exporter
++ jsonschema
 
 # packages without 100% coverage
 
@@ -15,5 +16,4 @@
 + env
 + ctx
 + orm/firestore/mockfs
-+ jsonschema
 + orm/firestore

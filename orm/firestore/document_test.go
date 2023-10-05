@@ -1,7 +1,5 @@
 package firestore_test
 
-//nolint:dupword
-/*
 import (
 	"bytes"
 	"errors"
@@ -16,7 +14,6 @@ import (
 	"github.com/DimmyJing/valise/orm/firestore"
 	"github.com/DimmyJing/valise/orm/firestore/mockfs"
 	"github.com/stretchr/testify/assert"
-	"google.golang.org/genproto/googleapis/type/latlng"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -46,6 +43,22 @@ func (d *docBuilder) addDocument(path string, obj map[string]*pb.Value) {
 					Fields:     obj,
 				},
 			},
+			ReadTime:    timestamppb.New(time.Now()),
+			Transaction: nil,
+		},
+	})
+}
+
+func (d *docBuilder) addMissingDocument(path string) {
+	longPath := "projects/projectID/databases/(default)/documents/" + path
+	d.server.AddRPC(&pb.BatchGetDocumentsRequest{
+		Database:            "projects/projectID/databases/(default)",
+		Documents:           []string{longPath},
+		Mask:                nil,
+		ConsistencySelector: nil,
+	}, []any{
+		&pb.BatchGetDocumentsResponse{
+			Result:      &pb.BatchGetDocumentsResponse_Missing{Missing: longPath},
 			ReadTime:    timestamppb.New(time.Now()),
 			Transaction: nil,
 		},
@@ -152,7 +165,6 @@ func TestFillStruct(t *testing.T) { //nolint:funlen
 	assert := assert.New(t)
 
 	type TestFillStructData struct {
-		ID               string `json:"-"`
 		TestString       string `json:"testString"`
 		name             string
 		TestMissing      string `json:"-"`
@@ -163,7 +175,6 @@ func TestFillStruct(t *testing.T) { //nolint:funlen
 		TestNilSlice     []int
 		TestBytes        []byte
 		TestTime         time.Time
-		TestDocumentRef  *origfirestore.DocumentRef
 		TestBool         bool
 		TestInt          int
 		TestUint         uint
@@ -186,6 +197,7 @@ func TestFillStruct(t *testing.T) { //nolint:funlen
 	type RootDocument struct {
 		firestore.Doc[struct{}]
 		TestCollection firestore.Collection[TestDocument, TestFillStructData] `json:"test"`
+		NonExistent    firestore.Collection[TestDocument, TestFillStructData] `json:"-,omitempty"`
 	}
 
 	client, server, err := mockfs.New()
@@ -195,47 +207,46 @@ func TestFillStruct(t *testing.T) { //nolint:funlen
 	now := time.Now().UTC()
 	builder.addDocument("test/test", map[string]*pb.Value{
 		"testString":       {ValueType: &pb.Value_StringValue{StringValue: "hello"}},
-		"TestNilPtr":       {ValueType: &pb.Value_NullValue{NullValue: structpb.NullValue_NULL_VALUE}},
-		"TestPtr":          {ValueType: &pb.Value_StringValue{StringValue: "hello"}},
-		"TestNilInterface": {ValueType: &pb.Value_NullValue{NullValue: structpb.NullValue_NULL_VALUE}},
-		"TestNilMap":       {ValueType: &pb.Value_NullValue{NullValue: structpb.NullValue_NULL_VALUE}},
-		"TestNilSlice":     {ValueType: &pb.Value_NullValue{NullValue: structpb.NullValue_NULL_VALUE}},
-		"TestBytes":        {ValueType: &pb.Value_BytesValue{BytesValue: []byte("hello")}},
-		"TestTime":         {ValueType: &pb.Value_TimestampValue{TimestampValue: timestamppb.New(now)}},
-		"TestDocumentRef": {
-			ValueType: &pb.Value_ReferenceValue{
-				ReferenceValue: "projects/projectID/databases/(default)/documents/test/test",
-			},
-		},
-		"TestBool":  {ValueType: &pb.Value_BooleanValue{BooleanValue: true}},
-		"TestInt":   {ValueType: &pb.Value_IntegerValue{IntegerValue: 1}},
-		"TestUint":  {ValueType: &pb.Value_IntegerValue{IntegerValue: 1}},
-		"TestFloat": {ValueType: &pb.Value_DoubleValue{DoubleValue: 1.0}},
-		"TestSlice": {
+		"testNilPtr":       {ValueType: &pb.Value_NullValue{NullValue: structpb.NullValue_NULL_VALUE}},
+		"testPtr":          {ValueType: &pb.Value_StringValue{StringValue: "hello"}},
+		"testNilInterface": {ValueType: &pb.Value_NullValue{NullValue: structpb.NullValue_NULL_VALUE}},
+		"testNilMap":       {ValueType: &pb.Value_NullValue{NullValue: structpb.NullValue_NULL_VALUE}},
+		"testNilSlice":     {ValueType: &pb.Value_NullValue{NullValue: structpb.NullValue_NULL_VALUE}},
+		"testBytes":        {ValueType: &pb.Value_BytesValue{BytesValue: []byte("hello")}},
+		"testTime":         {ValueType: &pb.Value_TimestampValue{TimestampValue: timestamppb.New(now)}},
+		"testBool":         {ValueType: &pb.Value_BooleanValue{BooleanValue: true}},
+		"testInt":          {ValueType: &pb.Value_IntegerValue{IntegerValue: 1}},
+		"testUint":         {ValueType: &pb.Value_IntegerValue{IntegerValue: 1}},
+		"testFloat":        {ValueType: &pb.Value_DoubleValue{DoubleValue: 1.0}},
+		"testSlice": {
 			ValueType: &pb.Value_ArrayValue{
 				ArrayValue: &pb.ArrayValue{Values: []*pb.Value{{ValueType: &pb.Value_IntegerValue{IntegerValue: 1}}}},
 			},
 		},
-		"TestArray": {
+		"testArray": {
 			ValueType: &pb.Value_ArrayValue{
-				ArrayValue: &pb.ArrayValue{Values: []*pb.Value{{ValueType: &pb.Value_IntegerValue{IntegerValue: 1}}}},
+				ArrayValue: &pb.ArrayValue{Values: []*pb.Value{
+					{ValueType: &pb.Value_IntegerValue{IntegerValue: 1}},
+					{ValueType: &pb.Value_IntegerValue{IntegerValue: 0}},
+					{ValueType: &pb.Value_IntegerValue{IntegerValue: 0}},
+					{ValueType: &pb.Value_IntegerValue{IntegerValue: 0}},
+				}},
 			},
 		},
-		"TestStruct": {
+		"testStruct": {
 			ValueType: &pb.Value_MapValue{MapValue: &pb.MapValue{Fields: map[string]*pb.Value{
-				"TestString": {ValueType: &pb.Value_StringValue{StringValue: "hello"}},
+				"testString": {ValueType: &pb.Value_StringValue{StringValue: "hello"}},
 			}}},
 		},
-		"TestMap": {
+		"testMap": {
 			ValueType: &pb.Value_MapValue{MapValue: &pb.MapValue{Fields: map[string]*pb.Value{
-				"TestString": {ValueType: &pb.Value_IntegerValue{IntegerValue: 1}},
+				"testString": {ValueType: &pb.Value_IntegerValue{IntegerValue: 1}},
 			}}},
 		},
-		"TestInterface": {ValueType: &pb.Value_StringValue{StringValue: "hello"}},
+		"testInterface": {ValueType: &pb.Value_StringValue{StringValue: "hello"}},
 	})
 
 	resultStruct := TestFillStructData{
-		ID:               "",
 		TestString:       "hello",
 		name:             "",
 		TestMissing:      "",
@@ -246,7 +257,6 @@ func TestFillStruct(t *testing.T) { //nolint:funlen
 		TestNilSlice:     make([]int, 0),
 		TestBytes:        []byte("hello"),
 		TestTime:         now,
-		TestDocumentRef:  client.Doc("test/test"),
 		TestBool:         true,
 		TestInt:          1,
 		TestUint:         1,
@@ -254,7 +264,7 @@ func TestFillStruct(t *testing.T) { //nolint:funlen
 		TestSlice:        []int{1},
 		TestArray:        [4]int{1, 0, 0, 0},
 		TestStruct:       struct{ TestString string }{TestString: "hello"},
-		TestMap:          map[string]int{"TestString": 1},
+		TestMap:          map[string]int{"testString": 1},
 		TestInterface:    "hello",
 	}
 
@@ -323,16 +333,6 @@ func TestFillStructErrors(t *testing.T) { //nolint:funlen
 		"invalid1": {ValueType: &pb.Value_TimestampValue{TimestampValue: timestamppb.Now()}},
 	})
 	expectError(map[string]*pb.Value{
-		"invalid1": {ValueType: &pb.Value_ReferenceValue{
-			ReferenceValue: "projects/projectID/databases/(default)/documents/test/test",
-		}},
-	})
-	expectError(map[string]*pb.Value{
-		"invalid1": {ValueType: &pb.Value_ReferenceValue{
-			ReferenceValue: "projects/projectID/databases/(default)/documents/test/test",
-		}},
-	})
-	expectError(map[string]*pb.Value{
 		"invalid1": {ValueType: &pb.Value_BooleanValue{BooleanValue: true}},
 	})
 	expectError(map[string]*pb.Value{
@@ -373,12 +373,6 @@ func TestFillStructErrors(t *testing.T) { //nolint:funlen
 		"invalid1": {ValueType: &pb.Value_MapValue{MapValue: &pb.MapValue{Fields: map[string]*pb.Value{
 			"hello": {ValueType: &pb.Value_StringValue{StringValue: "hello"}},
 		}}}},
-	})
-	expectError(map[string]*pb.Value{
-		"invalid2": {ValueType: &pb.Value_GeoPointValue{GeoPointValue: &latlng.LatLng{Latitude: 1.0, Longitude: 1.0}}},
-	})
-	expectError(map[string]*pb.Value{
-		"invalid3": {ValueType: &pb.Value_GeoPointValue{GeoPointValue: &latlng.LatLng{Latitude: 1.0, Longitude: 1.0}}},
 	})
 
 	builder.addDocument("test2/test", map[string]*pb.Value{
@@ -479,10 +473,8 @@ type testTransformStruct struct {
 	TestNilPtr   *string
 	TestPtr      *string
 	TestBytes    []byte
-	TestDocRef   *origfirestore.DocumentRef
 	TestBool     bool
 	TestInt      int
-	TestUint     uint
 	TestFloat    float64
 	TestArray    [4]int
 	TestNilSlice []int
@@ -520,19 +512,13 @@ func TestTransformStruct(t *testing.T) { //nolint:funlen
 	builder := docBuilder{server}
 	builder.setDocument("test/test", map[string]*pb.Value{
 		"version":    {ValueType: &pb.Value_StringValue{StringValue: "1.0.0"}},
-		"TestNilPtr": {ValueType: &pb.Value_NullValue{NullValue: structpb.NullValue_NULL_VALUE}},
-		"TestPtr":    {ValueType: &pb.Value_StringValue{StringValue: "hello"}},
-		"TestBytes":  {ValueType: &pb.Value_BytesValue{BytesValue: []byte("hello")}},
-		"TestDocRef": {
-			ValueType: &pb.Value_ReferenceValue{
-				ReferenceValue: "projects/projectID/databases/(default)/documents/test/test",
-			},
-		},
-		"TestBool":  {ValueType: &pb.Value_BooleanValue{BooleanValue: true}},
-		"TestInt":   {ValueType: &pb.Value_IntegerValue{IntegerValue: 1}},
-		"TestUint":  {ValueType: &pb.Value_IntegerValue{IntegerValue: 1}},
-		"TestFloat": {ValueType: &pb.Value_DoubleValue{DoubleValue: 1.0}},
-		"TestArray": {
+		"testNilPtr": {ValueType: &pb.Value_NullValue{NullValue: structpb.NullValue_NULL_VALUE}},
+		"testPtr":    {ValueType: &pb.Value_StringValue{StringValue: "hello"}},
+		"testBytes":  {ValueType: &pb.Value_BytesValue{BytesValue: []byte("hello")}},
+		"testBool":   {ValueType: &pb.Value_BooleanValue{BooleanValue: true}},
+		"testInt":    {ValueType: &pb.Value_IntegerValue{IntegerValue: 1}},
+		"testFloat":  {ValueType: &pb.Value_DoubleValue{DoubleValue: 1.0}},
+		"testArray": {
 			ValueType: &pb.Value_ArrayValue{
 				ArrayValue: &pb.ArrayValue{Values: []*pb.Value{
 					{ValueType: &pb.Value_IntegerValue{IntegerValue: 1}},
@@ -542,30 +528,30 @@ func TestTransformStruct(t *testing.T) { //nolint:funlen
 				}},
 			},
 		},
-		"TestNilSlice": {
+		"testNilSlice": {
 			ValueType: &pb.Value_ArrayValue{
 				ArrayValue: &pb.ArrayValue{Values: []*pb.Value{}},
 			},
 		},
-		"TestSlice": {
+		"testSlice": {
 			ValueType: &pb.Value_ArrayValue{
 				ArrayValue: &pb.ArrayValue{Values: []*pb.Value{{ValueType: &pb.Value_IntegerValue{IntegerValue: 1}}}},
 			},
 		},
-		"TestNilMap": {
+		"testNilMap": {
 			ValueType: &pb.Value_MapValue{MapValue: &pb.MapValue{Fields: map[string]*pb.Value{}}},
 		},
-		"TestMap": {
+		"testMap": {
 			ValueType: &pb.Value_MapValue{MapValue: &pb.MapValue{Fields: map[string]*pb.Value{
-				"TestString": {ValueType: &pb.Value_IntegerValue{IntegerValue: 1}},
+				"testString": {ValueType: &pb.Value_IntegerValue{IntegerValue: 1}},
 			}}},
 		},
-		"TestStruct": {
+		"testStruct": {
 			ValueType: &pb.Value_MapValue{MapValue: &pb.MapValue{Fields: map[string]*pb.Value{
-				"TestString": {ValueType: &pb.Value_StringValue{StringValue: "hello"}},
+				"testString": {ValueType: &pb.Value_StringValue{StringValue: "hello"}},
 			}}},
 		},
-		"TestInterface": {ValueType: &pb.Value_StringValue{StringValue: "hello"}},
+		"testInterface": {ValueType: &pb.Value_StringValue{StringValue: "hello"}},
 	})
 
 	root := firestore.CreateRoot[RootDocument](client)
@@ -577,16 +563,14 @@ func TestTransformStruct(t *testing.T) { //nolint:funlen
 		TestNilPtr:    nil,
 		TestPtr:       &[]string{"hello"}[0],
 		TestBytes:     []byte("hello"),
-		TestDocRef:    client.Doc("test/test"),
 		TestBool:      true,
 		TestInt:       1,
-		TestUint:      1,
 		TestFloat:     1.0,
 		TestArray:     [4]int{1, 0, 0, 0},
 		TestNilSlice:  nil,
 		TestSlice:     []int{1},
 		TestNilMap:    nil,
-		TestMap:       map[string]int{"TestString": 1},
+		TestMap:       map[string]int{"testString": 1},
 		TestStruct:    struct{ TestString string }{TestString: "hello"},
 		TestInterface: "hello",
 	})
@@ -785,6 +769,36 @@ func TestTimeStruct(t *testing.T) {
 		CreatedAt: time.Time{},
 	})
 	assert.NoError(err)
+}
+
+func TestMissingData(t *testing.T) {
+	t.Parallel()
+
+	assert := assert.New(t)
+
+	type TestDocument struct {
+		firestore.Doc[testTransformStruct]
+	}
+
+	type RootDocument struct {
+		firestore.Doc[struct{}]
+
+		TestCollection firestore.Collection[TestDocument, testTransformStruct] `json:"test"`
+	}
+
+	client, server, err := mockfs.New()
+	assert.NoError(err)
+
+	builder := docBuilder{server}
+	builder.addMissingDocument("test/test")
+
+	root := firestore.CreateRoot[RootDocument](client)
+	_, err = root.TestCollection.ID("test").Data(ctx.FromBackground())
+	assert.ErrorIs(err, firestore.ErrDocumentNotFound)
+
+	//nolint:exhaustruct
+	_, err = root.TestCollection.ID("test").DataFrom(&origfirestore.DocumentSnapshot{})
+	assert.ErrorIs(err, firestore.ErrDocumentNotFound)
 }
 
 func TestDelete(t *testing.T) {
@@ -1189,7 +1203,7 @@ func TestQueryDocuments(t *testing.T) { //nolint:funlen
 
 	data, err := root.TestCollection.Query(ctx.FromBackground())
 	assert.NoError(err)
-	assert.Equal(testQueryDocumentData{TestString: "hello"}, data[0])
+	assert.Equal(testQueryDocumentData{TestString: "hello"}, data[0].Data)
 
 	server.AddRPC(&pb.RunQueryRequest{
 		Parent: "projects/projectID/databases/(default)/documents",
@@ -1287,4 +1301,3 @@ func TestQueryDocuments(t *testing.T) { //nolint:funlen
 	_, err = iter.Next()
 	assert.Error(err)
 }
-*/

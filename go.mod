@@ -4,15 +4,21 @@ go 1.21.0
 
 require (
 	cloud.google.com/go/firestore v1.13.0
+	github.com/ClickHouse/clickhouse-go/v2 v2.14.1
 	github.com/charmbracelet/log v0.2.4
+	github.com/google/uuid v1.3.1
 	github.com/matoous/go-nanoid/v2 v2.0.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/exporter/clickhouseexporter v0.86.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheus v0.86.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheusremotewrite v0.86.0
+	github.com/prometheus/common v0.44.0
+	github.com/prometheus/prometheus v0.47.0
 	github.com/sanity-io/litter v1.5.5
+	github.com/segmentio/ksuid v1.0.4
 	github.com/stretchr/testify v1.8.4
 	github.com/swaggest/swgui v1.7.4
 	github.com/weathersource/go-gsrv v1.0.2
 	github.com/wk8/go-ordered-map/v2 v2.1.8
-	github.com/yoheimuta/go-protoparser v3.4.0+incompatible
 	go.opentelemetry.io/collector/component v0.86.0
 	go.opentelemetry.io/collector/config/configopaque v0.86.0
 	go.opentelemetry.io/collector/config/configtelemetry v0.86.0
@@ -36,14 +42,13 @@ require (
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect
 	cloud.google.com/go/longrunning v0.5.1 // indirect
 	github.com/ClickHouse/ch-go v0.58.2 // indirect
-	github.com/ClickHouse/clickhouse-go/v2 v2.14.1 // indirect
 	github.com/andybalholm/brotli v1.0.5 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/charmbracelet/lipgloss v0.8.0 // indirect
-	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/go-faster/city v1.0.1 // indirect
 	github.com/go-faster/errors v0.6.1 // indirect
 	github.com/go-logfmt/logfmt v0.6.0 // indirect
@@ -54,7 +59,6 @@ require (
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/s2a-go v0.1.7 // indirect
-	github.com/google/uuid v1.3.1 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.1 // indirect
 	github.com/googleapis/gax-go/v2 v2.12.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
@@ -77,7 +81,7 @@ require (
 	github.com/paulmach/orb v0.10.0 // indirect
 	github.com/pierrec/lz4/v4 v4.1.18 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect

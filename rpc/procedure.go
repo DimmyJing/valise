@@ -6,7 +6,7 @@ import (
 
 type Procedure struct {
 	middlewares []func(http.Handler) http.Handler
-	// func(proto.Message, ctx.Context) (proto.Message, error)
+	// func(input, ctx.Context) (output, error)
 	handler     any
 	method      string
 	tags        []string

@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func JSONSchemaToTS(inp *JSONInfo, prefix string) (string, error) {
+func JSONSchemaToTS(inp *JSONSchema, prefix string) (string, error) {
 	types, err := jsonSchemaToTS(*inp)
 	if err != nil {
 		return "", fmt.Errorf("failed to convert json schema to ts: %w", err)
@@ -43,10 +43,6 @@ func FormatComment(comment string) string {
 
 func indentMiddle(input string) string {
 	inputSplit := strings.Split(input, "\n")
-	//nolint:gomnd
-	if len(inputSplit) < 3 {
-		return input
-	}
 
 	var builder strings.Builder
 
@@ -64,7 +60,7 @@ func indentMiddle(input string) string {
 	return builder.String()
 }
 
-func jsonSchemaToTS(input JSONInfo) (string, error) { //nolint:funlen,cyclop,gocognit
+func jsonSchemaToTS(input JSONSchema) (string, error) { //nolint:funlen,cyclop,gocognit
 	if input.Type == "" {
 		return "unknown", nil
 	}
@@ -76,8 +72,6 @@ func jsonSchemaToTS(input JSONInfo) (string, error) { //nolint:funlen,cyclop,goc
 		}
 
 		switch input.Format {
-		case "duration":
-			return "Duration", nil
 		case "date-time":
 			return "Date", nil
 		default:
@@ -98,8 +92,8 @@ func jsonSchemaToTS(input JSONInfo) (string, error) { //nolint:funlen,cyclop,goc
 		return "null", nil
 	case "object":
 		//nolint:nestif
-		if prop, ok := input.AdditionalProperties.(*bool); ok {
-			if *prop {
+		if input.AdditionalProperties.boolean != nil {
+			if *input.AdditionalProperties.boolean {
 				return "Record<string, any>", nil
 			}
 
@@ -115,9 +109,7 @@ func jsonSchemaToTS(input JSONInfo) (string, error) { //nolint:funlen,cyclop,goc
 				key, value := pair.Key, pair.Value
 				required := slices.Index(input.Required, key) != -1
 
-				var optional string
-
-				// TODO: implement oneOf
+				optional := ""
 				if !required {
 					optional = "?"
 				}
@@ -133,8 +125,8 @@ func jsonSchemaToTS(input JSONInfo) (string, error) { //nolint:funlen,cyclop,goc
 			insideBuilder.WriteString("}")
 
 			return indentMiddle(insideBuilder.String()), nil
-		} else if prop, ok := input.AdditionalProperties.(JSONInfo); ok {
-			res, err := jsonSchemaToTS(prop)
+		} else if input.AdditionalProperties != nil {
+			res, err := jsonSchemaToTS(*input.AdditionalProperties)
 			if err != nil {
 				return "", fmt.Errorf("failed to convert object properties: %w", err)
 			}

@@ -4,17 +4,15 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-	"slices"
-	"strings"
 	"time"
 
 	"cloud.google.com/go/firestore"
 	"github.com/DimmyJing/valise/attr"
 	"github.com/DimmyJing/valise/ctx"
 	"github.com/DimmyJing/valise/jsonschema"
+	"github.com/DimmyJing/valise/utils"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/proto"
 )
 
 var (
@@ -22,36 +20,19 @@ var (
 	errMissingMigration = errors.New("missing migration")
 )
 
-func getFieldInfo(fieldType reflect.StructField) (string, bool, bool) {
-	fieldName := fieldType.Name
-	required := true
-	exported := fieldType.IsExported()
-
-	//nolint:nestif
-	if tag, ok := fieldType.Tag.Lookup("json"); ok {
-		splitTag := strings.Split(tag, ",")
-		if len(splitTag) > 0 {
-			if splitTag[0] == "-" {
-				return "", false, false
-			} else if splitTag[0] != "" {
-				fieldName = splitTag[0]
-			}
-
-			if slices.Contains(splitTag, "omitempty") {
-				required = false
-			}
-		}
+func transformStruct(data any, create bool) (map[string]any, error) {
+	res, err := jsonschema.ValueToAny(reflect.ValueOf(data))
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert value %v to any: %w", data, err)
 	}
-
-	return fieldName, required, exported
-}
-
-func transformStruct(data proto.Message, create bool) (map[string]any, error) {
-	res := jsonschema.MessageToAny(data.ProtoReflect())
 
 	resMap, ok := res.(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("failed to convert message to map %v, got %v - %T: %w", data, res, res, errInvalidStruct)
+	}
+
+	if versioner, ok := data.(Versioner); ok {
+		resMap["version"] = versioner.CurrentVersion()
 	}
 
 	if updatedAt, ok := resMap["updatedAt"]; ok {
@@ -70,7 +51,13 @@ func transformStruct(data proto.Message, create bool) (map[string]any, error) {
 }
 
 // TODO: figure out what to do with migrations.
-// TODO: figure out what to do with versions.
+type Migrater interface {
+	Migrate(map[string]any) map[string]any
+}
+
+type Versioner interface {
+	CurrentVersion() string
+}
 
 func callDataFrom[Doc any, Data any](doc *Doc, snap *firestore.DocumentSnapshot) (Data, error) { //nolint:ireturn
 	docVal := reflect.ValueOf(doc)
@@ -84,12 +71,10 @@ func callDataFrom[Doc any, Data any](doc *Doc, snap *firestore.DocumentSnapshot)
 	return res[0].Interface().(Data), nil
 }
 
-var ErrDataDoesNotExist = errors.New("data does not exist")
-
 func (d *Doc[D]) DataFrom(snap *firestore.DocumentSnapshot) (D, error) { //nolint:ireturn
 	data := *new(D)
 	if !snap.Exists() {
-		return data, ErrDataDoesNotExist
+		return data, ErrDocumentNotFound
 	}
 
 	rawData := snap.Data()
@@ -98,56 +83,43 @@ func (d *Doc[D]) DataFrom(snap *firestore.DocumentSnapshot) (D, error) { //nolin
 
 	var err error
 
-	/*
-		if versioner, ok := any(data).(Versioner); ok {
-			if version, ok := rawData["version"]; ok {
-				if versionStr, ok := version.(string); ok {
-					res, err := utils.CompareSemVer(versioner.CurrentVersion(), versionStr)
-					if err != nil {
-						return data, fmt.Errorf("failed to compare versions: %w", err)
-					}
-
-					needMigration = res > 0
+	//nolint:nestif
+	if versioner, ok := any(data).(Versioner); ok {
+		if version, ok := rawData["version"]; ok {
+			if versionStr, ok := version.(string); ok {
+				res, err := utils.CompareSemVer(versioner.CurrentVersion(), versionStr)
+				if err != nil {
+					return data, fmt.Errorf("failed to compare versions: %w", err)
 				}
+
+				needMigration = res > 0
 			}
 		}
-	*/
+	}
 
-	//nolint:nestif
 	if !needMigration {
-		msg := data.ProtoReflect().New()
-		if err := jsonschema.AnyToMessage(rawData, msg); err == nil {
-			if dat, ok := msg.Interface().(D); ok {
-				return dat, nil
-			} else {
-				return data, fmt.Errorf("failed to convert data to D: %w", err)
-			}
+		if err = jsonschema.AnyToValue(rawData, reflect.ValueOf(&data).Elem()); err == nil {
+			return data, nil
 		}
 	} else {
 		err = errMissingMigration
 	}
 
-	/*
-		if migrater, ok := any(data).(Migrater); ok {
-			rawData = migrater.Migrate(rawData)
+	if migrater, ok := any(data).(Migrater); ok {
+		rawData = migrater.Migrate(rawData)
+		data = *new(D)
 
-			msg := data.ProtoReflect().New()
-
-			err := jsonschema.AnyToMessage(rawData, msg)
-			if err != nil {
-				return data, fmt.Errorf("failed to convert data to D after migration: %w", err)
-			}
-
-			if dat, ok := msg.Interface().(D); ok {
-				data = dat
-			} else {
-				return data, fmt.Errorf("failed to convert data to D: %w", err)
-			}
+		if err := jsonschema.AnyToValue(rawData, reflect.ValueOf(&data).Elem()); err != nil {
+			return data, fmt.Errorf("failed to convert data to D after migration: %w", err)
 		}
-	*/
+
+		return data, nil
+	}
 
 	return data, fmt.Errorf("failed to fill struct with data: %w", err)
 }
+
+var ErrDocumentNotFound = errors.New("document not found")
 
 func (d *Doc[D]) Data(ctx ctx.Context) (D, error) { //nolint:ireturn
 	ctx, end := ctx.Nested("getDocument", attr.String("path", d.Ref.Path))
@@ -155,7 +127,7 @@ func (d *Doc[D]) Data(ctx ctx.Context) (D, error) { //nolint:ireturn
 
 	if snap, err := d.Ref.Get(ctx); err != nil {
 		if status.Code(err) == codes.NotFound {
-			return *new(D), nil
+			return *new(D), ErrDocumentNotFound
 		}
 
 		return *new(D), fmt.Errorf("error getting document snapshot: %w", err)

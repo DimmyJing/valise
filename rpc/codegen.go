@@ -15,8 +15,8 @@ func createStub(
 	path string,
 	method string,
 	description string,
-	req jsonschema.JSONInfo,
-	res jsonschema.JSONInfo,
+	req jsonschema.JSONSchema,
+	res jsonschema.JSONSchema,
 ) (string, error) {
 	pathSplit := strings.Split(path, "/")
 	origPathName := pathSplit[len(pathSplit)-1]
@@ -73,7 +73,7 @@ func processPath(path openAPIPathItem, pathString string) (string, error) { //no
 
 	operationDescription := operation.Description
 
-	var requestSchema jsonschema.JSONInfo
+	requestSchema := jsonschema.JSONSchemaFalse
 
 	//nolint:nestif
 	if method == "get" || method == "delete" {
@@ -85,7 +85,7 @@ func processPath(path openAPIPathItem, pathString string) (string, error) { //no
 		}
 
 		requestSchema.Type = "object"
-		requestSchema.Properties = orderedmap.New[string, *jsonschema.JSONInfo]()
+		requestSchema.Properties = orderedmap.New[string, *jsonschema.JSONSchema]()
 
 		for _, param := range params {
 			schema := param.Schema
@@ -99,9 +99,6 @@ func processPath(path openAPIPathItem, pathString string) (string, error) { //no
 				requestSchema.Required = append(requestSchema.Required, param.Name)
 			}
 		}
-
-		falseVal := false
-		requestSchema.AdditionalProperties = &falseVal
 	} else if method == "post" || method == "put" {
 		var body openAPIRequestBody
 

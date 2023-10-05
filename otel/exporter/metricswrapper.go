@@ -20,7 +20,7 @@ func (m metricsExporter) Temporality(kind metric.InstrumentKind) metricdata.Temp
 	if m.temporalityFn != nil {
 		return m.temporalityFn(kind)
 	} else {
-		return metricdata.DeltaTemporality
+		return metricdata.CumulativeTemporality
 	}
 }
 

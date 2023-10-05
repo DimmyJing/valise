@@ -8,7 +8,6 @@ import (
 	"github.com/DimmyJing/valise/attr"
 	"github.com/DimmyJing/valise/ctx"
 	"google.golang.org/api/iterator"
-	"google.golang.org/protobuf/proto"
 )
 
 type Query = firestore.Query
@@ -54,12 +53,12 @@ func (i *docRefIterator[Doc]) HasNext() bool {
 	return i.errCache != iterator.Done
 }
 
-type DocSnap[Doc any, D proto.Message] struct {
+type DocSnap[Doc any, D any] struct {
 	Doc  Doc
 	Data D
 }
 
-type docIterator[Doc any, D proto.Message] struct {
+type docIterator[Doc any, D any] struct {
 	iter   *firestore.DocumentIterator
 	client *firestore.Client
 

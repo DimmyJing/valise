@@ -13,8 +13,6 @@ import (
 	"github.com/DimmyJing/valise/jsonschema"
 	"github.com/DimmyJing/valise/log"
 	orderedmap "github.com/wk8/go-ordered-map/v2"
-	"google.golang.org/protobuf/encoding/protojson"
-	"google.golang.org/protobuf/proto"
 )
 
 func NewRootRouter(title string, description string, version string, codeGen bool, codePath string) *Router {
@@ -29,7 +27,7 @@ func NewRootRouter(title string, description string, version string, codeGen boo
 	}
 
 	if codeGen {
-		jsonschema.InitProtoMap(codePath)
+		jsonschema.InitCommentMap(codePath)
 	}
 
 	mux := http.NewServeMux()
@@ -97,7 +95,7 @@ var (
 	errBadInput         = fmt.Errorf("bad input")
 )
 
-func (r *Router) Flush() { //nolint:funlen,gocognit,cyclop
+func (r *Router) Flush() error { //nolint:funlen,gocognit,cyclop
 	for _, router := range r.routers {
 		path := make([]string, len(r.path)+1)
 		copy(path, r.path)
@@ -105,7 +103,11 @@ func (r *Router) Flush() { //nolint:funlen,gocognit,cyclop
 		router.router.path = path
 		router.router.document = r.document
 		router.router.mux = r.mux
-		router.router.Flush()
+
+		err := router.router.Flush()
+		if err != nil {
+			return fmt.Errorf("failed to flush router: %w", err)
+		}
 	}
 
 	for _, proc := range r.procedures {
@@ -114,33 +116,30 @@ func (r *Router) Flush() { //nolint:funlen,gocognit,cyclop
 		newPath := "/" + strings.Join(r.path, "/") + "/" + path
 		method := proc.method
 
-		protoHandlerFn := reflect.ValueOf(proc.handler)
-		protoHandlerFnType := protoHandlerFn.Type()
+		handlerFn := reflect.ValueOf(proc.handler)
+		handlerFnType := handlerFn.Type()
 
-		//nolint:forcetypeassert
-		inputMsg := reflect.Zero(protoHandlerFnType.In(0)).Interface().(proto.Message)
-		inputReflect := inputMsg.ProtoReflect()
-		inputFields := inputMsg.ProtoReflect().Descriptor().Fields()
-		inputIsList := make(map[string]bool)
+		inputMsg := reflect.Zero(handlerFnType.In(0)).Type()
+		outputMsg := reflect.Zero(handlerFnType.Out(0)).Type()
 
-		//nolint:forcetypeassert
-		outputMsg := reflect.Zero(protoHandlerFnType.Out(0)).Interface().(proto.Message)
+		inputIsList := map[string]bool{}
 
-		for i := 0; i < inputFields.Len(); i++ {
-			field := inputFields.Get(i)
-			if field.IsList() {
-				inputIsList[field.JSONName()] = true
+		for i := 0; i < inputMsg.NumField(); i++ {
+			if inputMsg.Field(i).Type.Kind() == reflect.Slice || inputMsg.Field(i).Type.Kind() == reflect.Array {
+				inputIsList[inputMsg.Field(i).Name] = true
 			}
 		}
 
-		handlerFn := func(writer http.ResponseWriter, request *http.Request) {
+		httpHandlerFn := func(writer http.ResponseWriter, request *http.Request) {
 			if request.Method != proc.method {
 				log.Panic(NewHTTPError(http.StatusMethodNotAllowed,
 					fmt.Errorf("%s not allowed on %s: %w", request.Method, newPath, errMethodNotAllowed)),
 				)
 			}
 
-			inputMsg := inputReflect.New().Interface()
+			inputValue := reflect.New(inputMsg).Elem()
+
+			var inputAny any
 
 			//nolint:nestif
 			if method == http.MethodGet || method == http.MethodDelete {
@@ -185,7 +184,7 @@ func (r *Router) Flush() { //nolint:funlen,gocognit,cyclop
 
 				buf.WriteString("}")
 
-				err := protojson.Unmarshal(buf.Bytes(), inputMsg)
+				err := json.Unmarshal(buf.Bytes(), &inputAny)
 				if err != nil {
 					log.Panic(NewHTTPError(http.StatusBadRequest,
 						fmt.Errorf("error unmarshaling input %v: %w", buf.String(), err)),
@@ -197,16 +196,20 @@ func (r *Router) Flush() { //nolint:funlen,gocognit,cyclop
 					log.Panic(NewHTTPError(http.StatusBadRequest, fmt.Errorf("error reading body: %w", err)))
 				}
 
-				err = protojson.Unmarshal(inputBody, inputMsg)
+				err = json.Unmarshal(inputBody, &inputAny)
 				if err != nil {
 					log.Panic(NewHTTPError(http.StatusBadRequest, fmt.Errorf("error unmarshaling input: %w", err)))
 				}
 			}
 
-			out := protoHandlerFn.Call([]reflect.Value{
-				reflect.ValueOf(inputMsg),
-				reflect.ValueOf(ctx.FromHTTP(writer, request)),
-			})
+			err := jsonschema.AnyToValue(inputAny, inputValue)
+			if err != nil {
+				log.Panic(NewHTTPError(http.StatusBadRequest,
+					fmt.Errorf("error converting input %v: %w", inputAny, err)),
+				)
+			}
+
+			out := handlerFn.Call([]reflect.Value{inputValue, reflect.ValueOf(ctx.FromHTTP(writer, request))})
 			if !out[1].IsNil() {
 				if err, ok := out[1].Interface().(error); ok {
 					log.Panic(NewHTTPError(http.StatusInternalServerError, err))
@@ -218,21 +221,19 @@ func (r *Router) Flush() { //nolint:funlen,gocognit,cyclop
 				}
 			}
 
-			output, ok := out[0].Interface().(proto.Message)
-			if !ok {
-				//nolint:goerr113
-				log.Panic(NewHTTPError(
-					http.StatusInternalServerError, fmt.Errorf("non-proto message returned from handler: %v", out[0].Interface()),
-				))
+			output := out[0].Interface()
+
+			outRes, err := jsonschema.ValueToAny(reflect.ValueOf(output))
+			if err != nil {
+				log.Panic(NewHTTPError(http.StatusInternalServerError,
+					fmt.Errorf("error converting output %v: %w", output, err)),
+				)
 			}
 
-			//nolint:exhaustruct
-			opt := protojson.MarshalOptions{EmitUnpopulated: true}
-			if result, err := opt.Marshal(output); err == nil {
+			if result, err := json.Marshal(outRes); err == nil {
 				writer.Header().Set("Content-Type", "application/json")
 
-				_, err = writer.Write(result)
-				if err != nil {
+				if _, err = writer.Write(result); err != nil {
 					log.Panic(NewHTTPError(http.StatusInternalServerError, err))
 				}
 			} else {
@@ -240,7 +241,7 @@ func (r *Router) Flush() { //nolint:funlen,gocognit,cyclop
 			}
 		}
 
-		handler := http.Handler(http.HandlerFunc(handlerFn))
+		handler := http.Handler(http.HandlerFunc(httpHandlerFn))
 		for i := len(proc.middlewares) - 1; i >= 0; i-- {
 			handler = proc.middlewares[i](handler)
 		}
@@ -249,6 +250,11 @@ func (r *Router) Flush() { //nolint:funlen,gocognit,cyclop
 
 		proc.tags = append(proc.tags, strings.Join(r.path, "/"))
 
-		r.document.addOperation(newPath, inputMsg, outputMsg, method, proc.description, proc.tags)
+		err := r.document.addOperation(newPath, inputMsg, outputMsg, method, proc.description, proc.tags)
+		if err != nil {
+			return fmt.Errorf("failed to add operation: %w", err)
+		}
 	}
+
+	return nil
 }

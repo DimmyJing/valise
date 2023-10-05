@@ -1,0 +1,305 @@
+package jsonschema_test
+
+import (
+	"fmt"
+	"reflect"
+	"testing"
+	"time"
+
+	"github.com/DimmyJing/valise/jsonschema"
+	"github.com/stretchr/testify/assert"
+)
+
+//nolint:forcetypeassert
+func TestValueToAny(t *testing.T) { //nolint:funlen
+	t.Parallel()
+
+	//nolint:tagliatelle
+	type testVal struct {
+		TestBool         bool
+		TestInt          int
+		TestUint         uint
+		TestFloat        float64
+		TestArray        [8]int
+		TestInterface    any
+		TestNilInterface any
+		TestPtrInterface any
+		TestMap          map[string]int
+		TestPtr          *string
+		TestNilPtr       *string
+		TestSlice        []int
+		TestString       string
+		TestBytes        []byte
+		TestTime         time.Time
+		TestIgnore       string `json:"-"`
+		TestName         string `json:"testCustomName"`
+		TestOptional     string `json:",omitempty"`
+		TestOptional2    string `json:",omitempty"`
+		testNotExported  string
+	}
+
+	input := testVal{
+		TestBool:         true,
+		TestInt:          1,
+		TestUint:         2,
+		TestFloat:        3.0,
+		TestArray:        [8]int{1, 2, 3, 4, 5, 6, 7, 8},
+		TestInterface:    "test",
+		TestNilInterface: nil,
+		TestPtrInterface: &[]string{"hello"}[0],
+		TestMap: map[string]int{
+			"test": 1,
+		},
+		TestPtr:         &[]string{"hello"}[0],
+		TestNilPtr:      nil,
+		TestSlice:       []int{1, 2, 3, 4, 5, 6, 7, 8},
+		TestString:      "test",
+		TestBytes:       []byte("test"),
+		TestTime:        time.Unix(1, 1).UTC(),
+		TestIgnore:      "test",
+		TestName:        "test",
+		TestOptional:    "test",
+		TestOptional2:   "",
+		testNotExported: "test",
+	}
+
+	res, err := jsonschema.ValueToAny(reflect.ValueOf(input))
+	resMap := res.(map[string]any)
+
+	assert.NoError(t, err)
+	assert.Equal(t, true, resMap["testBool"])
+	assert.Equal(t, int64(1), resMap["testInt"])
+	assert.Equal(t, uint64(2), resMap["testUint"])
+	assert.Equal(t, 3.0, resMap["testFloat"])
+	assert.Equal(t,
+		[]any{int64(1), int64(2), int64(3), int64(4), int64(5), int64(6), int64(7), int64(8)},
+		resMap["testArray"],
+	)
+	assert.Equal(t, "test", resMap["testInterface"])
+	assert.Equal(t, nil, resMap["testNilInterface"])
+	assert.Equal(t, "hello", resMap["testPtrInterface"])
+	assert.Equal(t, map[string]any{"test": int64(1)}, resMap["testMap"])
+	assert.Equal(t, "hello", resMap["testPtr"])
+	assert.Equal(t, nil, resMap["testNilPtr"])
+	assert.Equal(t,
+		[]any{int64(1), int64(2), int64(3), int64(4), int64(5), int64(6), int64(7), int64(8)},
+		resMap["testSlice"],
+	)
+	assert.Equal(t, "test", resMap["testString"])
+	assert.Equal(t, []byte("test"), resMap["testBytes"])
+	assert.Equal(t, time.Unix(1, 1).UTC(), resMap["testTime"])
+	assert.Equal(t, "test", resMap["testCustomName"])
+	assert.Equal(t, "test", resMap["testOptional"])
+	assert.Equal(t, nil, resMap["testNotExported"])
+	assert.Equal(t, nil, resMap["testOptional2"])
+}
+
+func TestValueToAnyError(t *testing.T) {
+	t.Parallel()
+
+	_, err := jsonschema.ValueToAny(reflect.ValueOf(complex64(1)))
+	assert.Error(t, err)
+
+	_, err = jsonschema.ValueToAny(reflect.ValueOf([]complex64{0}))
+	assert.Error(t, err)
+
+	_, err = jsonschema.ValueToAny(reflect.ValueOf(map[string]complex64{"hello": 1}))
+	assert.Error(t, err)
+
+	_, err = jsonschema.ValueToAny(reflect.ValueOf(map[complex64]string{}))
+	assert.Error(t, err)
+
+	_, err = jsonschema.ValueToAny(reflect.ValueOf(&[]complex64{0}[0]))
+	assert.Error(t, err)
+
+	_, err = jsonschema.ValueToAny(reflect.ValueOf(struct{ A complex64 }{A: 1}))
+	assert.Error(t, err)
+
+	_, err = jsonschema.ValueToAny(reflect.ValueOf([1]complex64{1}))
+	assert.Error(t, err)
+
+	var stringer fmt.Stringer = time.Time{}
+	_, err = jsonschema.ValueToAny(reflect.ValueOf(&stringer))
+	assert.Error(t, err)
+}
+
+func TestAnyToValue(t *testing.T) { //nolint:funlen
+	t.Parallel()
+
+	//nolint:tagliatelle
+	type testVal struct {
+		TestBool         bool
+		TestInt          int
+		TestUint         uint
+		TestFloat        float64
+		TestArray        [8]int
+		TestInterface    any
+		TestNilInterface any
+		TestPtrInterface any
+		TestMap          map[string]int
+		TestNilMap       map[string]int
+		TestMissingMap   map[string]int `json:",omitempty"`
+		TestPtr          *string
+		TestNilPtr       *string
+		TestSlice        []int
+		TestNilSlice     []int
+		TestMissingSlice []int `json:",omitempty"`
+		TestString       string
+		TestBytes        []byte
+		TestTime         time.Time
+		TestIgnore       string `json:"-"`
+		TestName         string `json:"testCustomName"`
+		TestOptional     string `json:",omitempty"`
+		TestOptional2    string `json:",omitempty"`
+		TestEnum         TestEnum
+		testNotExported  string
+	}
+
+	input := map[string]any{
+		"testBool":         true,
+		"testInt":          int64(1),
+		"testUint":         uint64(2),
+		"testFloat":        3.0,
+		"testArray":        []any{int64(1), int64(2), int64(3), int64(4), int64(5), int64(6), int64(7), int64(8)},
+		"testInterface":    "test",
+		"testNilInterface": nil,
+		"testPtrInterface": "hello",
+		"testMap":          map[string]any{"test": int64(1)},
+		"testNilMap":       nil,
+		"testPtr":          "hello",
+		"testNilPtr":       nil,
+		"testNilSlice":     nil,
+		"testSlice":        []any{int64(1), int64(2), int64(3), int64(4), int64(5), int64(6), int64(7), int64(8)},
+		"testString":       "test",
+		"testBytes":        []byte("test"),
+		"testTime":         time.Unix(1, 1).UTC(),
+		"testCustomName":   "test",
+		"testOptional":     "test",
+		"testEnum":         "A",
+	}
+
+	var val testVal
+	err := jsonschema.AnyToValue(input, reflect.ValueOf(&val).Elem())
+	assert.NoError(t, err)
+
+	assert.Equal(t, true, val.TestBool)
+	assert.Equal(t, 1, val.TestInt)
+	assert.Equal(t, uint(2), val.TestUint)
+	assert.Equal(t, 3.0, val.TestFloat)
+	assert.Equal(t, [8]int{1, 2, 3, 4, 5, 6, 7, 8}, val.TestArray)
+	assert.Equal(t, "test", val.TestInterface)
+	assert.Equal(t, nil, val.TestNilInterface)
+	assert.Equal(t, "hello", val.TestPtrInterface)
+	assert.Equal(t, map[string]int{"test": 1}, val.TestMap)
+	assert.Equal(t, map[string]int{}, val.TestNilMap)
+	assert.Equal(t, map[string]int(nil), val.TestMissingMap)
+	assert.Equal(t, &[]string{"hello"}[0], val.TestPtr)
+	assert.Equal(t, (*string)(nil), val.TestNilPtr)
+	assert.Equal(t, []int{}, val.TestNilSlice)
+	assert.Equal(t, []int{1, 2, 3, 4, 5, 6, 7, 8}, val.TestSlice)
+	assert.Equal(t, []int{}, val.TestNilSlice)
+	assert.Equal(t, []int(nil), val.TestMissingSlice)
+	assert.Equal(t, "test", val.TestString)
+	assert.Equal(t, []byte("test"), val.TestBytes)
+	assert.Equal(t, time.Unix(1, 1).UTC(), val.TestTime)
+	assert.Equal(t, "test", val.TestName)
+	assert.Equal(t, "test", val.TestOptional)
+	assert.Equal(t, "", val.TestOptional2)
+	assert.Equal(t, TestEnumA, val.TestEnum)
+	assert.Equal(t, "", val.testNotExported)
+}
+
+func TestAnyToValueError(t *testing.T) { //nolint:funlen
+	t.Parallel()
+
+	err := jsonschema.AnyToValue(1, reflect.ValueOf(1))
+	assert.Error(t, err)
+
+	var valBool bool
+	err = jsonschema.AnyToValue(1, reflect.ValueOf(&valBool).Elem())
+	assert.Error(t, err)
+
+	var valInt int
+	err = jsonschema.AnyToValue(true, reflect.ValueOf(&valInt).Elem())
+	assert.Error(t, err)
+
+	var valUint uint
+	err = jsonschema.AnyToValue(true, reflect.ValueOf(&valUint).Elem())
+	assert.Error(t, err)
+
+	var valFloat float64
+	err = jsonschema.AnyToValue(true, reflect.ValueOf(&valFloat).Elem())
+	assert.Error(t, err)
+
+	var valArray [1]int
+	err = jsonschema.AnyToValue(true, reflect.ValueOf(&valArray).Elem())
+	assert.Error(t, err)
+
+	var valArray2 [1]int
+	err = jsonschema.AnyToValue([]any{}, reflect.ValueOf(&valArray2).Elem())
+	assert.Error(t, err)
+
+	var valArray3 [1]int
+	err = jsonschema.AnyToValue([]any{true}, reflect.ValueOf(&valArray3).Elem())
+	assert.Error(t, err)
+
+	var stringer fmt.Stringer = time.Time{}
+	err = jsonschema.AnyToValue(true, reflect.ValueOf(&stringer).Elem())
+	assert.Error(t, err)
+
+	var valMap map[int]int
+	err = jsonschema.AnyToValue(true, reflect.ValueOf(&valMap).Elem())
+	assert.Error(t, err)
+
+	var valMap2 map[string]int
+	err = jsonschema.AnyToValue(map[string]any{"a": true}, reflect.ValueOf(&valMap2).Elem())
+	assert.Error(t, err)
+
+	var valMap3 map[string]int
+	err = jsonschema.AnyToValue(true, reflect.ValueOf(&valMap3).Elem())
+	assert.Error(t, err)
+
+	var valPtr *complex64
+	err = jsonschema.AnyToValue(true, reflect.ValueOf(&valPtr).Elem())
+	assert.Error(t, err)
+
+	var valBytes []byte
+	err = jsonschema.AnyToValue(true, reflect.ValueOf(&valBytes).Elem())
+	assert.Error(t, err)
+
+	var valSlice []int
+	err = jsonschema.AnyToValue([]any{true}, reflect.ValueOf(&valSlice).Elem())
+	assert.Error(t, err)
+
+	var valSlice2 []int
+	err = jsonschema.AnyToValue(true, reflect.ValueOf(&valSlice2).Elem())
+	assert.Error(t, err)
+
+	var valEnum TestEnum
+	err = jsonschema.AnyToValue("C", reflect.ValueOf(&valEnum).Elem())
+	assert.Error(t, err)
+
+	var valString string
+	err = jsonschema.AnyToValue(true, reflect.ValueOf(&valString).Elem())
+	assert.Error(t, err)
+
+	var valTime time.Time
+	err = jsonschema.AnyToValue(true, reflect.ValueOf(&valTime).Elem())
+	assert.Error(t, err)
+
+	var valStruct struct{ Test string }
+	err = jsonschema.AnyToValue(map[string]any{"test": true}, reflect.ValueOf(&valStruct).Elem())
+	assert.Error(t, err)
+
+	var valStruct2 struct{ Test string }
+	err = jsonschema.AnyToValue(map[string]any{}, reflect.ValueOf(&valStruct2).Elem())
+	assert.Error(t, err)
+
+	var valStruct3 struct{}
+	err = jsonschema.AnyToValue(map[string]any{"test": true}, reflect.ValueOf(&valStruct3).Elem())
+	assert.Error(t, err)
+
+	var valStruct4 struct{}
+	err = jsonschema.AnyToValue(true, reflect.ValueOf(&valStruct4).Elem())
+	assert.Error(t, err)
+}

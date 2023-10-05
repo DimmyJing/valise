@@ -1,0 +1,169 @@
+{
+	"title": "TestSchema",
+	"type": "object",
+	"properties": {
+		"testBool": {
+			"title": "testBool",
+			"type": "boolean"
+		},
+		"testInt": {
+			"title": "testInt",
+			"type": "integer",
+			"format": "int32"
+		},
+		"testInt8": {
+			"title": "testInt8",
+			"type": "integer",
+			"format": "int32"
+		},
+		"testInt16": {
+			"title": "testInt16",
+			"type": "integer",
+			"format": "int32"
+		},
+		"testInt32": {
+			"title": "testInt32",
+			"type": "integer",
+			"format": "int32"
+		},
+		"testUInt": {
+			"title": "testUInt",
+			"type": "integer",
+			"format": "int32"
+		},
+		"testUInt8": {
+			"title": "testUInt8",
+			"type": "integer",
+			"format": "int32"
+		},
+		"testUInt16": {
+			"title": "testUInt16",
+			"type": "integer",
+			"format": "int32"
+		},
+		"testUInt32": {
+			"title": "testUInt32",
+			"type": "integer",
+			"format": "int32"
+		},
+		"testInt64": {
+			"title": "testInt64",
+			"type": "integer",
+			"format": "int64"
+		},
+		"testUInt64": {
+			"title": "testUInt64",
+			"type": "integer",
+			"format": "int64"
+		},
+		"testFloat32": {
+			"title": "testFloat32",
+			"type": "number",
+			"format": "float"
+		},
+		"testFloat64": {
+			"title": "testFloat64",
+			"type": "number",
+			"format": "double"
+		},
+		"testArray": {
+			"title": "testArray",
+			"type": "array",
+			"items": {
+				"title": "int",
+				"type": "integer",
+				"format": "int32"
+			},
+			"maxItems": 8,
+			"minItems": 8
+		},
+		"testInterface": true,
+		"testMap": {
+			"title": "testMap",
+			"type": "object",
+			"additionalProperties": {
+				"title": "int",
+				"type": "integer",
+				"format": "int32"
+			}
+		},
+		"testPtr": {
+			"title": "testPtr",
+			"type": "string"
+		},
+		"testSlice": {
+			"title": "testSlice",
+			"type": "array",
+			"items": {
+				"title": "int",
+				"type": "integer",
+				"format": "int32"
+			}
+		},
+		"testString": {
+			"title": "testString",
+			"type": "string"
+		},
+		"testEnum": {
+			"title": "testEnum",
+			"type": "string",
+			"enum": [
+				"A",
+				"B"
+			]
+		},
+		"testStruct": {
+			"title": "testStruct",
+			"type": "object",
+			"properties": {
+				"testBool": {
+					"title": "testBool",
+					"type": "boolean"
+				}
+			},
+			"required": [
+				"testBool"
+			],
+			"additionalProperties": false
+		},
+		"testFieldName2": {
+			"title": "testFieldName2",
+			"type": "string"
+		},
+		"testOptional": {
+			"title": "testOptional",
+			"type": "string"
+		},
+		"testTime": {
+			"title": "testTime",
+			"type": "string",
+			"format": "date-time"
+		}
+	},
+	"required": [
+		"testBool",
+		"testInt",
+		"testInt8",
+		"testInt16",
+		"testInt32",
+		"testUInt",
+		"testUInt8",
+		"testUInt16",
+		"testUInt32",
+		"testInt64",
+		"testUInt64",
+		"testFloat32",
+		"testFloat64",
+		"testArray",
+		"testInterface",
+		"testMap",
+		"testPtr",
+		"testSlice",
+		"testString",
+		"testEnum",
+		"testStruct",
+		"testFieldName2",
+		"testTime"
+	],
+	"additionalProperties": false
+}

@@ -3,11 +3,11 @@ package firestore
 import (
 	"context"
 	"reflect"
+	"strings"
 
 	"cloud.google.com/go/firestore"
 	"github.com/DimmyJing/valise/attr"
 	"github.com/DimmyJing/valise/ctx"
-	"google.golang.org/protobuf/proto"
 )
 
 type documentInterface interface {
@@ -17,7 +17,7 @@ type documentInterface interface {
 	getClient() *firestore.Client
 }
 
-type Doc[D proto.Message] struct {
+type Doc[D any] struct {
 	Ref    *firestore.DocumentRef
 	Client *firestore.Client
 }
@@ -111,6 +111,24 @@ func (d *Doc[D]) Delete(ctx ctx.Context) (*firestore.WriteResult, error) {
 	return res, ctx.FailIf(err)
 }
 
+func getFieldInfo(fieldType reflect.StructField) (string, bool) {
+	fieldName := fieldType.Name
+	exported := fieldType.IsExported()
+
+	if tag, ok := fieldType.Tag.Lookup("json"); ok {
+		splitTag := strings.Split(tag, ",")
+		if len(splitTag) > 0 {
+			if splitTag[0] == "-" {
+				return "", false
+			} else if splitTag[0] != "" {
+				fieldName = splitTag[0]
+			}
+		}
+	}
+
+	return fieldName, exported
+}
+
 func createDocument[Type any]( //nolint:ireturn
 	ref *firestore.DocumentRef,
 	client *firestore.Client,
@@ -127,7 +145,7 @@ func createDocument[Type any]( //nolint:ireturn
 	for fieldIdx := 0; fieldIdx < objValue.NumField(); fieldIdx++ {
 		field := objType.Field(fieldIdx)
 
-		path, _, exported := getFieldInfo(field)
+		path, exported := getFieldInfo(field)
 		if !exported || field.Type.Kind() != reflect.Struct {
 			continue
 		}
