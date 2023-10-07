@@ -31,6 +31,10 @@ var errReflectType = fmt.Errorf("invalid reflect.Type")
 func convertType(value reflect.Type) (*JSONSchema, error) { //nolint:funlen,gocognit,gocyclo,cyclop
 	var schema JSONSchema
 
+	if desc, found := getDescription(value.PkgPath(), value.Name(), ""); found {
+		schema.Description = desc
+	}
+
 	switch value.Kind() {
 	case reflect.Bool:
 		//nolint:goconst
@@ -54,7 +58,7 @@ func convertType(value reflect.Type) (*JSONSchema, error) { //nolint:funlen,goco
 		//nolint:goconst
 		schema.Type = "array"
 
-		val, err := AnyToSchema(value.Elem())
+		val, err := convertType(value.Elem())
 		if err != nil {
 			return nil, fmt.Errorf("error converting array element type: %w", err)
 		}
@@ -73,14 +77,14 @@ func convertType(value reflect.Type) (*JSONSchema, error) { //nolint:funlen,goco
 		//nolint:goconst
 		schema.Type = "object"
 
-		val, err := AnyToSchema(value.Elem())
+		val, err := convertType(value.Elem())
 		if err != nil {
 			return nil, fmt.Errorf("error converting map element type: %w", err)
 		}
 
 		schema.AdditionalProperties = val
 	case reflect.Ptr:
-		val, err := AnyToSchema(value.Elem())
+		val, err := convertType(value.Elem())
 		if err != nil {
 			return nil, fmt.Errorf("error converting pointer type: %w", err)
 		}
@@ -89,7 +93,7 @@ func convertType(value reflect.Type) (*JSONSchema, error) { //nolint:funlen,goco
 	case reflect.Slice:
 		schema.Type = "array"
 
-		val, err := AnyToSchema(value.Elem())
+		val, err := convertType(value.Elem())
 		if err != nil {
 			return nil, fmt.Errorf("error converting slice element type: %w", err)
 		}
@@ -141,9 +145,13 @@ func convertType(value reflect.Type) (*JSONSchema, error) { //nolint:funlen,goco
 					schema.Properties = orderedmap.New[string, *JSONSchema]()
 				}
 
-				property, err := AnyToSchema(field.Type)
+				property, err := convertType(field.Type)
 				if err != nil {
 					return nil, fmt.Errorf("error converting struct field %s: %w", fieldName, err)
+				}
+
+				if desc, found := getDescription(value.PkgPath(), value.Name(), field.Name); found {
+					property.Description = desc
 				}
 
 				property.Title = fieldName

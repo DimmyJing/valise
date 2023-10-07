@@ -1,6 +1,7 @@
 package firestore
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 
@@ -207,7 +208,9 @@ func (c *Collection[Doc, D]) GetAll(ctx ctx.Context, documents []Doc) ([]DocSnap
 
 	for idx, snap := range snaps {
 		data, err := callDataFrom[Doc, D](&documents[idx], snap)
-		if err != nil {
+		if errors.Is(err, ErrDocumentNotFound) {
+			return nil, ctx.Fail(ErrDocumentNotFound)
+		} else if err != nil {
 			return nil, ctx.Fail(err)
 		}
 

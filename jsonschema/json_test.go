@@ -129,10 +129,15 @@ func TestAnyToValue(t *testing.T) { //nolint:funlen
 	//nolint:tagliatelle
 	type testVal struct {
 		TestBool         bool
+		TestBool2        bool
 		TestInt          int
+		TestInt2         int
 		TestUint         uint
+		TestUint2        uint
 		TestFloat        float64
+		TestFloat2       float64
 		TestArray        [8]int
+		TestArray2       [8]int
 		TestInterface    any
 		TestNilInterface any
 		TestPtrInterface any
@@ -142,6 +147,7 @@ func TestAnyToValue(t *testing.T) { //nolint:funlen
 		TestPtr          *string
 		TestNilPtr       *string
 		TestSlice        []int
+		TestSlice2       []int
 		TestNilSlice     []int
 		TestMissingSlice []int `json:",omitempty"`
 		TestString       string
@@ -157,10 +163,15 @@ func TestAnyToValue(t *testing.T) { //nolint:funlen
 
 	input := map[string]any{
 		"testBool":         true,
+		"testBool2":        "true",
 		"testInt":          int64(1),
+		"testInt2":         "1",
 		"testUint":         uint64(2),
+		"testUint2":        "2",
 		"testFloat":        3.0,
+		"testFloat2":       "3.0",
 		"testArray":        []any{int64(1), int64(2), int64(3), int64(4), int64(5), int64(6), int64(7), int64(8)},
+		"testArray2":       []string{"1", "2", "3", "4", "5", "6", "7", "8"},
 		"testInterface":    "test",
 		"testNilInterface": nil,
 		"testPtrInterface": "hello",
@@ -170,6 +181,7 @@ func TestAnyToValue(t *testing.T) { //nolint:funlen
 		"testNilPtr":       nil,
 		"testNilSlice":     nil,
 		"testSlice":        []any{int64(1), int64(2), int64(3), int64(4), int64(5), int64(6), int64(7), int64(8)},
+		"testSlice2":       []string{"1", "2", "3", "4", "5", "6", "7", "8"},
 		"testString":       "test",
 		"testBytes":        []byte("test"),
 		"testTime":         time.Unix(1, 1).UTC(),
@@ -207,6 +219,12 @@ func TestAnyToValue(t *testing.T) { //nolint:funlen
 	assert.Equal(t, "", val.TestOptional2)
 	assert.Equal(t, TestEnumA, val.TestEnum)
 	assert.Equal(t, "", val.testNotExported)
+	assert.Equal(t, true, val.TestBool2)
+	assert.Equal(t, 1, val.TestInt2)
+	assert.Equal(t, uint(2), val.TestUint2)
+	assert.Equal(t, 3.0, val.TestFloat2)
+	assert.Equal(t, [8]int{1, 2, 3, 4, 5, 6, 7, 8}, val.TestArray2)
+	assert.Equal(t, []int{1, 2, 3, 4, 5, 6, 7, 8}, val.TestSlice2)
 }
 
 func TestAnyToValueError(t *testing.T) { //nolint:funlen
@@ -219,20 +237,38 @@ func TestAnyToValueError(t *testing.T) { //nolint:funlen
 	err = jsonschema.AnyToValue(1, reflect.ValueOf(&valBool).Elem())
 	assert.Error(t, err)
 
+	err = jsonschema.AnyToValue("hello", reflect.ValueOf(&valBool).Elem())
+	assert.Error(t, err)
+
 	var valInt int
 	err = jsonschema.AnyToValue(true, reflect.ValueOf(&valInt).Elem())
+	assert.Error(t, err)
+
+	err = jsonschema.AnyToValue("a", reflect.ValueOf(&valInt).Elem())
 	assert.Error(t, err)
 
 	var valUint uint
 	err = jsonschema.AnyToValue(true, reflect.ValueOf(&valUint).Elem())
 	assert.Error(t, err)
 
+	err = jsonschema.AnyToValue("a", reflect.ValueOf(&valUint).Elem())
+	assert.Error(t, err)
+
 	var valFloat float64
 	err = jsonschema.AnyToValue(true, reflect.ValueOf(&valFloat).Elem())
 	assert.Error(t, err)
 
+	err = jsonschema.AnyToValue("a", reflect.ValueOf(&valFloat).Elem())
+	assert.Error(t, err)
+
 	var valArray [1]int
 	err = jsonschema.AnyToValue(true, reflect.ValueOf(&valArray).Elem())
+	assert.Error(t, err)
+
+	err = jsonschema.AnyToValue([]string{"a"}, reflect.ValueOf(&valArray).Elem())
+	assert.Error(t, err)
+
+	err = jsonschema.AnyToValue([]string{"a", "b"}, reflect.ValueOf(&valArray).Elem())
 	assert.Error(t, err)
 
 	var valArray2 [1]int
@@ -269,6 +305,9 @@ func TestAnyToValueError(t *testing.T) { //nolint:funlen
 
 	var valSlice []int
 	err = jsonschema.AnyToValue([]any{true}, reflect.ValueOf(&valSlice).Elem())
+	assert.Error(t, err)
+
+	err = jsonschema.AnyToValue([]string{"a"}, reflect.ValueOf(&valSlice).Elem())
 	assert.Error(t, err)
 
 	var valSlice2 []int

@@ -15,7 +15,14 @@ import (
 	orderedmap "github.com/wk8/go-ordered-map/v2"
 )
 
-func NewRootRouter(title string, description string, version string, codeGen bool, codePath string) *Router {
+func NewRootRouter(
+	title string,
+	description string,
+	version string,
+	codeGen bool,
+	codePath string,
+	basePkg string,
+) *Router {
 	document := openAPIObject{
 		Openapi: "3.1.0",
 		Info: openAPIInfo{
@@ -27,7 +34,7 @@ func NewRootRouter(title string, description string, version string, codeGen boo
 	}
 
 	if codeGen {
-		jsonschema.InitCommentMap(codePath)
+		jsonschema.InitCommentMap(codePath, basePkg)
 	}
 
 	mux := http.NewServeMux()
