@@ -13,8 +13,7 @@ import (
 func TestComment(t *testing.T) {
 	t.Parallel()
 
-	err := jsonschema.InitCommentMap("../", "github.com/DimmyJing/valise")
-	assert.NoError(t, err)
+	jsonschema.InitCommentMap("../", "github.com/DimmyJing/valise")
 
 	var data testdata.Comment1
 

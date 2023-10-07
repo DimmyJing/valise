@@ -158,6 +158,14 @@ func AnyToValue(anyVal any, value reflect.Value) error { //nolint:funlen,gocogni
 			}
 
 			value.SetBool(res)
+		} else if stringSliceVal, isStringSlice := anyVal.([]string); isStringSlice {
+			if len(stringSliceVal) != 1 {
+				return fmt.Errorf("invalid string slice length %d: %w", len(stringSliceVal), errReflectType)
+			} else if res, err := strconv.ParseBool(stringSliceVal[0]); err != nil {
+				return fmt.Errorf("invalid bool string value %s: %w", stringSliceVal[0], errReflectType)
+			} else {
+				value.SetBool(res)
+			}
 		} else {
 			return fmt.Errorf("invalid bool value %v: %w", anyVal, errReflectType)
 		}
@@ -173,6 +181,14 @@ func AnyToValue(anyVal any, value reflect.Value) error { //nolint:funlen,gocogni
 			}
 
 			value.SetInt(intVal)
+		} else if stringSliceVal, isStringSlice := anyVal.([]string); isStringSlice {
+			if len(stringSliceVal) != 1 {
+				return fmt.Errorf("invalid string slice length %d: %w", len(stringSliceVal), errReflectType)
+			} else if res, err := strconv.ParseInt(stringSliceVal[0], 10, 64); err != nil {
+				return fmt.Errorf("invalid int string value %s: %w", stringSliceVal[0], errReflectType)
+			} else {
+				value.SetInt(res)
+			}
 		} else {
 			return fmt.Errorf("cannot set int value from %v: %w", anyVal, errReflectType)
 		}
@@ -188,6 +204,14 @@ func AnyToValue(anyVal any, value reflect.Value) error { //nolint:funlen,gocogni
 			}
 
 			value.SetUint(intVal)
+		} else if stringSliceVal, isStringSlice := anyVal.([]string); isStringSlice {
+			if len(stringSliceVal) != 1 {
+				return fmt.Errorf("invalid string slice length %d: %w", len(stringSliceVal), errReflectType)
+			} else if res, err := strconv.ParseUint(stringSliceVal[0], 10, 64); err != nil {
+				return fmt.Errorf("invalid uint string value %s: %w", stringSliceVal[0], errReflectType)
+			} else {
+				value.SetUint(res)
+			}
 		} else {
 			return fmt.Errorf("cannot set uint value from %v: %w", anyVal, errReflectType)
 		}
@@ -203,6 +227,14 @@ func AnyToValue(anyVal any, value reflect.Value) error { //nolint:funlen,gocogni
 			}
 
 			value.SetFloat(floatVal)
+		} else if stringSliceVal, isStringSlice := anyVal.([]string); isStringSlice {
+			if len(stringSliceVal) != 1 {
+				return fmt.Errorf("invalid string slice length %d: %w", len(stringSliceVal), errReflectType)
+			} else if res, err := strconv.ParseFloat(stringSliceVal[0], 64); err != nil {
+				return fmt.Errorf("invalid float string value %s: %w", stringSliceVal[0], errReflectType)
+			} else {
+				value.SetFloat(res)
+			}
 		} else {
 			return fmt.Errorf("cannot set float value from %v: %w", anyVal, errReflectType)
 		}
@@ -318,6 +350,12 @@ func AnyToValue(anyVal any, value reflect.Value) error { //nolint:funlen,gocogni
 			}
 
 			value.SetString(stringVal)
+		} else if stringSliceVal, isStringSlice := anyVal.([]string); isStringSlice {
+			if len(stringSliceVal) != 1 {
+				return fmt.Errorf("invalid string slice length %d: %w", len(stringSliceVal), errReflectType)
+			} else {
+				value.SetString(stringSliceVal[0])
+			}
 		} else {
 			return fmt.Errorf("invalid string value %v: %w", anyVal, errReflectType)
 		}
