@@ -86,7 +86,7 @@ func (o *openAPIObject) addOperation( //nolint:funlen
 		Description: description,
 		Responses: map[string]openAPIResponse{
 			"200": {
-				// TODO: Description: jsonschema.GetComment(output),
+				Description: outSchema.Description,
 				Content: map[string]openAPIMediaType{
 					"application/json": {Schema: *outSchema},
 				},
@@ -131,9 +131,9 @@ func (o *openAPIObject) addOperation( //nolint:funlen
 		}
 	} else {
 		bodyOp := &openAPIBodyOperation{openAPIOperation: operation, RequestBody: openAPIRequestBody{
-			// TODO: Description: jsonschema.GetComment(input),
-			Required: true,
-			Content:  map[string]openAPIMediaType{"application/json": {Schema: *inputSchema}},
+			Description: inputSchema.Description,
+			Required:    true,
+			Content:     map[string]openAPIMediaType{"application/json": {Schema: *inputSchema}},
 		}}
 
 		if method == "post" {

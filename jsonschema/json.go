@@ -149,6 +149,7 @@ func AnyToValue(anyVal any, value reflect.Value) error { //nolint:funlen,gocogni
 	//nolint:exhaustive
 	switch value.Type().Kind() {
 	case reflect.Bool:
+		//nolint:nestif
 		if boolVal, isBool := anyVal.(bool); isBool {
 			value.SetBool(boolVal)
 		} else if stringVal, isString := anyVal.(string); isString {
@@ -172,6 +173,7 @@ func AnyToValue(anyVal any, value reflect.Value) error { //nolint:funlen,gocogni
 	// TODO: make this faster by not using reflect
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		anyElem := reflect.ValueOf(anyVal)
+		//nolint:nestif
 		if anyElem.CanConvert(value.Type()) {
 			value.Set(anyElem.Convert(value.Type()))
 		} else if stringVal, isString := anyVal.(string); isString {
@@ -195,6 +197,7 @@ func AnyToValue(anyVal any, value reflect.Value) error { //nolint:funlen,gocogni
 	// TODO: make this faster by not using reflect
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		anyElem := reflect.ValueOf(anyVal)
+		//nolint:nestif
 		if anyElem.CanConvert(value.Type()) {
 			value.Set(anyElem.Convert(value.Type()))
 		} else if stringVal, isString := anyVal.(string); isString {
@@ -218,6 +221,7 @@ func AnyToValue(anyVal any, value reflect.Value) error { //nolint:funlen,gocogni
 	// TODO: make this faster by not using reflect
 	case reflect.Float32, reflect.Float64:
 		anyElem := reflect.ValueOf(anyVal)
+		//nolint:nestif
 		if anyElem.CanConvert(value.Type()) {
 			value.Set(anyElem.Convert(value.Type()))
 		} else if stringVal, isString := anyVal.(string); isString {
