@@ -59,6 +59,16 @@ type DocSnap[Doc any, D any] struct {
 	Data D
 }
 
+type DocSnapOptional[Doc any, D any] struct {
+	Doc   Doc
+	data  D
+	found bool
+}
+
+func (s DocSnapOptional[Doc, D]) Data() (D, bool) { //nolint:ireturn
+	return s.data, s.found
+}
+
 type docIterator[Doc any, D any] struct {
 	iter   *firestore.DocumentIterator
 	client *firestore.Client
@@ -189,7 +199,7 @@ func (c *Collection[Doc, D]) Query(ctx ctx.Context, queryFns ...func(query Query
 	return res, nil
 }
 
-func (c *Collection[Doc, D]) GetAll(ctx ctx.Context, documents []Doc) ([]DocSnap[Doc, D], error) {
+func (c *Collection[Doc, D]) GetAll(ctx ctx.Context, documents []Doc) ([]DocSnapOptional[Doc, D], error) {
 	ctx, end := ctx.Nested("getAll", attr.String("path", c.Ref().Path))
 	defer end()
 
@@ -199,7 +209,7 @@ func (c *Collection[Doc, D]) GetAll(ctx ctx.Context, documents []Doc) ([]DocSnap
 		docRefs[i] = reflect.ValueOf(doc).FieldByName("Ref").Interface().(*firestore.DocumentRef)
 	}
 
-	res := make([]DocSnap[Doc, D], len(documents))
+	res := make([]DocSnapOptional[Doc, D], len(documents))
 
 	snaps, err := c.client.GetAll(ctx, docRefs)
 	if err != nil {
@@ -208,15 +218,14 @@ func (c *Collection[Doc, D]) GetAll(ctx ctx.Context, documents []Doc) ([]DocSnap
 
 	for idx, snap := range snaps {
 		data, err := callDataFrom[Doc, D](&documents[idx], snap)
-		if errors.Is(err, ErrDocumentNotFound) {
-			return nil, ctx.Fail(ErrDocumentNotFound)
-		} else if err != nil {
+		if err != nil && !errors.Is(err, ErrDocumentNotFound) {
 			return nil, ctx.Fail(err)
 		}
 
-		res[idx] = DocSnap[Doc, D]{
-			Doc:  documents[idx],
-			Data: data,
+		res[idx] = DocSnapOptional[Doc, D]{
+			Doc:   documents[idx],
+			data:  data,
+			found: !errors.Is(err, ErrDocumentNotFound),
 		}
 	}
 
