@@ -5,7 +5,7 @@ import (
 )
 
 type Procedure struct {
-	middlewares []func(http.Handler) http.Handler
+	middlewares []func(Handler) Handler
 	// func(input, ctx.Context) (output, error)
 	handler     any
 	method      string
@@ -13,8 +13,8 @@ type Procedure struct {
 	description string
 }
 
-func (p *Procedure) With(middleware func(http.Handler) http.Handler) *Procedure {
-	newMiddlewares := make([]func(http.Handler) http.Handler, len(p.middlewares)+1)
+func (p *Procedure) With(middleware func(Handler) Handler) *Procedure {
+	newMiddlewares := make([]func(Handler) Handler, len(p.middlewares)+1)
 	copy(newMiddlewares, p.middlewares)
 	newMiddlewares[len(p.middlewares)] = middleware
 

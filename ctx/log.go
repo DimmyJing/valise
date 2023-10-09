@@ -15,7 +15,7 @@ func (c Context) WithLog(logger *log.Logger) Context {
 	return c.WithValue(loggerContextKey, logger)
 }
 
-func (c Context) getLog() *log.Logger {
+func (c Context) GetLog() *log.Logger {
 	return ValueDefault[*log.Logger](c, loggerContextKey, log.Default())
 }
 
@@ -125,6 +125,10 @@ func (e *callerError) Error() string {
 	return fmt.Sprintf("<%s:%d>{%s}", trimCallerPath(f.File, 2), f.Line, e.error.Error())
 }
 
+func (e *callerError) Unwrap() error {
+	return e.error
+}
+
 func newWithStack(err error) error {
 	var pcs [1]uintptr
 
@@ -138,24 +142,29 @@ func newWithStack(err error) error {
 }
 
 func (c Context) Fail(err error, args ...attr.Attr) error {
+	err = newWithStack(err)
+	c.recordEvent(err, args)
 	c.fail(err.Error())
 
-	return newWithStack(err)
+	return err
 }
 
 func (c Context) Failf(msg string, args ...any) error {
 	//nolint:goerr113
-	err := fmt.Errorf(msg, args...)
+	err := newWithStack(fmt.Errorf(msg, args...))
+	c.recordEvent(err, []attr.Attr{})
 	c.fail(err.Error())
 
-	return newWithStack(err)
+	return err
 }
 
 func (c Context) FailIf(err error, args ...attr.Attr) error {
 	if err != nil {
+		err = newWithStack(err)
+		c.recordEvent(err, args)
 		c.fail(err.Error())
 
-		return newWithStack(err)
+		return err
 	}
 
 	return nil
@@ -167,8 +176,8 @@ func (c Context) LogHelper(
 	skips int,
 	args ...attr.Attr,
 ) {
-	if c.getLog().Enabled(c, level) {
+	if c.GetLog().Enabled(c, level) {
 		c.recordEvent(msg, args)
-		c.getLog().LogHelper(c, level, msg, skips+1, args...)
+		c.GetLog().LogHelper(c, level, msg, skips+1, args...)
 	}
 }

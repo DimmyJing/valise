@@ -11,10 +11,9 @@ import (
 
 	"github.com/DimmyJing/valise/ctx"
 	"github.com/DimmyJing/valise/jsonschema"
-	"github.com/DimmyJing/valise/log"
 )
 
-func registerHandler( //nolint:funlen,gocognit,gocyclo,cyclop
+func registerHandler( //nolint:funlen,gocognit,cyclop
 	routerProc routerProcedure,
 	paths []string,
 	mux *http.ServeMux,
@@ -58,11 +57,14 @@ func registerHandler( //nolint:funlen,gocognit,gocyclo,cyclop
 		}
 	}
 
-	httpHandlerFn := func(writer http.ResponseWriter, request *http.Request) {
+	httpHandlerFn := func(ctx ctx.Context) error {
+		request, _ := ctx.GetRequest()
+		writer, _ := ctx.GetResponseWriter()
+
 		if request.Method != proc.method {
-			log.Panic(NewHTTPError(http.StatusMethodNotAllowed,
-				fmt.Errorf("%s not allowed on %s: %w", request.Method, newPath, errMethodNotAllowed)),
-			)
+			return ctx.Fail(NewHTTPError(http.StatusMethodNotAllowed,
+				fmt.Errorf("%s not allowed on %s: %w", request.Method, newPath, errMethodNotAllowed),
+			))
 		}
 
 		inputValue := reflect.New(inputMsg).Elem()
@@ -89,24 +91,24 @@ func registerHandler( //nolint:funlen,gocognit,gocyclo,cyclop
 				if val, ok := inputIsList[key]; ok && val {
 					valBuf, err := json.Marshal(value)
 					if err != nil {
-						log.Panic(NewHTTPError(http.StatusBadRequest,
-							fmt.Errorf("error marshaling input %v for %s: %w", value, key, err)),
-						)
+						return ctx.Fail(NewHTTPError(http.StatusBadRequest,
+							fmt.Errorf("error marshaling input %v for %s: %w", value, key, err),
+						))
 					}
 
 					buf.Write(valBuf)
 				} else if len(value) == 1 {
 					valBuf, err := json.Marshal(value[0])
 					if err != nil {
-						log.Panic(NewHTTPError(http.StatusBadRequest,
-							fmt.Errorf("error marshaling input %v for %s: %w", value, key, err)),
-						)
+						return ctx.Fail(NewHTTPError(http.StatusBadRequest,
+							fmt.Errorf("error marshaling input %v for %s: %w", value, key, err),
+						))
 					}
 					buf.Write(valBuf)
 				} else {
-					log.Panic(NewHTTPError(http.StatusBadRequest,
-						fmt.Errorf("expect value for %s, but got list %v: %w", key, value, errBadInput)),
-					)
+					return ctx.Fail(NewHTTPError(http.StatusBadRequest,
+						fmt.Errorf("expect value for %s, but got list %v: %w", key, value, errBadInput),
+					))
 				}
 			}
 
@@ -114,36 +116,36 @@ func registerHandler( //nolint:funlen,gocognit,gocyclo,cyclop
 
 			err := json.Unmarshal(buf.Bytes(), &inputAny)
 			if err != nil {
-				log.Panic(NewHTTPError(http.StatusBadRequest,
-					fmt.Errorf("error unmarshaling input %v: %w", buf.String(), err)),
-				)
+				return ctx.Fail(NewHTTPError(http.StatusBadRequest,
+					fmt.Errorf("error unmarshaling input %v: %w", buf.String(), err),
+				))
 			}
 		} else {
 			inputBody, err := io.ReadAll(request.Body)
 			if err != nil {
-				log.Panic(NewHTTPError(http.StatusBadRequest, fmt.Errorf("error reading body: %w", err)))
+				return ctx.Fail(NewHTTPError(http.StatusBadRequest, fmt.Errorf("error reading body: %w", err)))
 			}
 
 			err = json.Unmarshal(inputBody, &inputAny)
 			if err != nil {
-				log.Panic(NewHTTPError(http.StatusBadRequest, fmt.Errorf("error unmarshaling input: %w", err)))
+				return ctx.Fail(NewHTTPError(http.StatusBadRequest, fmt.Errorf("error unmarshaling input: %w", err)))
 			}
 		}
 
 		err := jsonschema.AnyToValue(inputAny, inputValue)
 		if err != nil {
-			log.Panic(NewHTTPError(http.StatusBadRequest,
-				fmt.Errorf("error converting input %v: %w", inputAny, err)),
-			)
+			return ctx.Fail(NewHTTPError(http.StatusBadRequest,
+				fmt.Errorf("error converting input %v: %w", inputAny, err),
+			))
 		}
 
-		out := handlerFn.Call([]reflect.Value{inputValue, reflect.ValueOf(ctx.FromHTTP(writer, request))})
+		out := handlerFn.Call([]reflect.Value{inputValue, reflect.ValueOf(ctx)})
 		if !out[1].IsNil() {
 			if err, ok := out[1].Interface().(error); ok {
-				log.Panic(NewHTTPError(http.StatusInternalServerError, err))
+				return ctx.Fail(NewHTTPError(http.StatusInternalServerError, err))
 			} else {
 				//nolint:goerr113
-				log.Panic(NewHTTPError(http.StatusInternalServerError,
+				return ctx.Fail(NewHTTPError(http.StatusInternalServerError,
 					fmt.Errorf("non-error value returned from handler: %v", out[1].Interface()),
 				))
 			}
@@ -153,28 +155,25 @@ func registerHandler( //nolint:funlen,gocognit,gocyclo,cyclop
 
 		outRes, err := jsonschema.ValueToAny(reflect.ValueOf(output))
 		if err != nil {
-			log.Panic(NewHTTPError(http.StatusInternalServerError,
-				fmt.Errorf("error converting output %v: %w", output, err)),
-			)
+			return ctx.Fail(NewHTTPError(http.StatusInternalServerError,
+				fmt.Errorf("error converting output %v: %w", output, err),
+			))
 		}
 
 		if result, err := json.Marshal(outRes); err == nil {
 			writer.Header().Set("Content-Type", "application/json")
 
 			if _, err = writer.Write(result); err != nil {
-				log.Panic(NewHTTPError(http.StatusInternalServerError, err))
+				return ctx.Fail(NewHTTPError(http.StatusInternalServerError, err))
 			}
 		} else {
-			log.Panic(NewHTTPError(http.StatusInternalServerError, fmt.Errorf("error marshaling output: %w", err)))
+			return ctx.Fail(NewHTTPError(http.StatusInternalServerError, fmt.Errorf("error marshaling output: %w", err)))
 		}
+
+		return nil
 	}
 
-	handler := http.Handler(http.HandlerFunc(httpHandlerFn))
-	for i := len(proc.middlewares) - 1; i >= 0; i-- {
-		handler = proc.middlewares[i](handler)
-	}
-
-	mux.Handle(newPath, handler)
+	mux.Handle(newPath, applyMiddlewares(httpHandlerFn, proc.middlewares, newPath))
 
 	proc.tags = append(proc.tags, strings.Join(paths, "/"))
 
