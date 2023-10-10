@@ -11,6 +11,7 @@ import (
 	"github.com/DimmyJing/valise/ctx"
 	"github.com/DimmyJing/valise/jsonschema"
 	"github.com/DimmyJing/valise/utils"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -122,7 +123,12 @@ func (d *Doc[D]) DataFrom(snap *firestore.DocumentSnapshot) (D, error) { //nolin
 var ErrDocumentNotFound = errors.New("document not found")
 
 func (d *Doc[D]) Data(ctx ctx.Context) (D, error) { //nolint:ireturn
-	ctx, end := ctx.Nested("getDocument", attr.String("path", d.Ref.Path))
+	ctx, end := ctx.NestedClient("firestore.data",
+		attr.String("path", d.Ref.Path),
+		attr.String(string(semconv.DBSystemKey), "firestore"),
+		attr.String(string(semconv.DBNameKey), getDBName(d.Ref.Path)),
+		attr.String(string(semconv.DBOperationKey), "data"),
+	)
 	defer end()
 
 	if snap, err := d.Ref.Get(ctx); err != nil {

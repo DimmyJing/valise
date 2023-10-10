@@ -64,7 +64,7 @@ func applyMiddlewares(handler Handler, middlewares []func(Handler) Handler, rout
 var errHandlerPanic = errors.New("handler panic")
 
 func ErrorMiddleware(next Handler) Handler {
-	return Handler(func(ctx ctx.Context) error {
+	return Handler(func(cctx ctx.Context) error {
 		defer func() {
 			if rawError := recover(); rawError != nil {
 				err, ok := rawError.(error)
@@ -72,21 +72,28 @@ func ErrorMiddleware(next Handler) Handler {
 					err = fmt.Errorf("%v: %w", rawError, errHandlerPanic)
 				}
 
-				ctx.Error(err.Error(), attr.String(string(semconv.ExceptionStacktraceKey), string(debug.Stack())))
-				// if ctx.Fail is already called, this will not do anything as the span is ended already
-				_ = ctx.Fail(err, attr.String(string(semconv.ExceptionStacktraceKey), string(debug.Stack())))
+				cctx.Error(err.Error(), attr.String(string(semconv.ExceptionStacktraceKey), string(debug.Stack())))
+				// this means that ctx.Fail is not called on the error, so we call it here
+				//nolint:errorlint
+				if _, ok := err.(*ctx.CallerError); !ok {
+					_ = cctx.Fail(err, attr.String(string(semconv.ExceptionStacktraceKey), string(debug.Stack())))
+				}
 			}
 		}()
 
-		err := next(ctx)
+		err := next(cctx)
 		if err != nil {
-			ctx.Error(err.Error())
-			// if ctx.Fail is already called, this will not do anything as the span is ended already
-			_ = ctx.Fail(err)
+			cctx.Error(err.Error())
+
+			// this means that ctx.Fail is not called on the error, so we call it here
+			//nolint:errorlint
+			if _, ok := err.(*ctx.CallerError); !ok {
+				_ = cctx.Fail(err)
+			}
 
 			return err
 		} else {
-			ctx.GetLog().Info("ok")
+			cctx.GetLog().Info("ok")
 		}
 
 		return nil
@@ -96,12 +103,20 @@ func ErrorMiddleware(next Handler) Handler {
 func CORSMiddleware(next Handler) Handler {
 	return Handler(func(ctx ctx.Context) error {
 		writer, _ := ctx.GetResponseWriter()
+
 		writer.Header().Set("Access-Control-Allow-Origin", "*")
 		writer.Header().Set("Access-Control-Allow-Methods", strings.Join([]string{
 			http.MethodGet, http.MethodHead, http.MethodPost, http.MethodOptions,
 			http.MethodPut, http.MethodPatch, http.MethodDelete,
 		}, ", "))
 		writer.Header().Set("Access-Control-Allow-Headers", "*")
+
+		request, _ := ctx.GetRequest()
+		if request.Method == http.MethodOptions {
+			writer.WriteHeader(http.StatusOK)
+
+			return nil
+		}
 
 		return next(ctx)
 	})

@@ -93,7 +93,7 @@ func (c Context) Capturef(msg string, args ...any) error {
 	return err
 }
 
-type callerError struct {
+type CallerError struct {
 	error
 	pc uintptr
 }
@@ -118,14 +118,14 @@ func trimCallerPath(path string, numTrim int) string {
 	return path[idx+1:]
 }
 
-func (e *callerError) Error() string {
+func (e *CallerError) Error() string {
 	fs := runtime.CallersFrames([]uintptr{e.pc})
 	f, _ := fs.Next()
 	//nolint:gomnd
 	return fmt.Sprintf("<%s:%d>{%s}", trimCallerPath(f.File, 2), f.Line, e.error.Error())
 }
 
-func (e *callerError) Unwrap() error {
+func (e *CallerError) Unwrap() error {
 	return e.error
 }
 
@@ -135,7 +135,7 @@ func newWithStack(err error) error {
 	//nolint:gomnd
 	runtime.Callers(3, pcs[:])
 
-	return &callerError{
+	return &CallerError{
 		error: err,
 		pc:    pcs[0],
 	}

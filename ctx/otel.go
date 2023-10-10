@@ -90,6 +90,26 @@ func (c Context) Nested(name string, attrs ...attr.Attr) (Context, func()) {
 	return c, func() { trace.SpanFromContext(c).End() }
 }
 
+func (c Context) NestedClient(name string, attrs ...attr.Attr) (Context, func()) {
+	if tracer, ok := Value[trace.Tracer](c, otelTracerKey); ok {
+		res := make([]attribute.KeyValue, len(attrs))
+		for i, a := range attrs {
+			res[i] = attr.OtelAttr(a)
+		}
+
+		ctx, span := tracer.Start(
+			c,
+			name,
+			trace.WithAttributes(res...),
+			trace.WithSpanKind(trace.SpanKindClient),
+		)
+
+		return From(ctx), func() { span.End() }
+	}
+
+	return c, func() { trace.SpanFromContext(c).End() }
+}
+
 func (c Context) SetAttributes(attrs ...attr.Attr) {
 	span := trace.SpanFromContext(c)
 
@@ -110,7 +130,6 @@ func (c Context) SetAnyAttribute(key string, val any) {
 func (c Context) fail(msg string) {
 	span := trace.SpanFromContext(c)
 	span.SetStatus(codes.Error, msg)
-	span.End()
 }
 
 func (c Context) recordEvent(msg any, args []attr.Attr) {

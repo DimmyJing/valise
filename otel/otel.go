@@ -7,6 +7,7 @@ import (
 
 	"github.com/DimmyJing/valise/log"
 	"github.com/DimmyJing/valise/otel/exporter"
+	"github.com/DimmyJing/valise/otel/exporter/signoz"
 	"github.com/DimmyJing/valise/otel/otellog"
 	colexporter "go.opentelemetry.io/collector/exporter"
 	"go.opentelemetry.io/otel"
@@ -26,8 +27,8 @@ type OTelOptions struct {
 	DeploymentEnvironment string
 	ExtraAttributes       []attribute.KeyValue
 
-	UseClickhouse    bool
-	ClickhouseConfig *exporter.ClickhouseConfig
+	UseClickhouse bool
+	ClickhouseDSN string
 
 	Disable bool
 }
@@ -110,14 +111,13 @@ func Init(ctx context.Context, options OTelOptions) error { //nolint:funlen,cycl
 			logs    colexporter.Logs
 		)
 
-		if options.UseClickhouse && options.ClickhouseConfig != nil {
-			traces, metrics, logs, err = exporter.NewClickhouseExporters(
-				ctx,
-				options.ClickhouseConfig,
-			)
+		if options.UseClickhouse && options.ClickhouseDSN != "" {
+			exporter, err := signoz.NewSignozExporter(options.ClickhouseDSN)
 			if err != nil {
-				return fmt.Errorf("failed to initialize clickhouse exporters: %w", err)
+				return fmt.Errorf("failed to initialize signoz exporter: %w", err)
 			}
+
+			traces, metrics, logs = exporter, exporter, exporter
 		} else {
 			traces, metrics, logs = exporter.NewIOWriterExporters(ctx, log.Default())
 			if err != nil {

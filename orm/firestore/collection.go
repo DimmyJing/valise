@@ -4,6 +4,7 @@ import (
 	"cloud.google.com/go/firestore"
 	"github.com/DimmyJing/valise/attr"
 	"github.com/DimmyJing/valise/ctx"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 )
 
 type collectionInterface interface {
@@ -33,7 +34,12 @@ func (c *Collection[Doc, D]) ID(id string) *Doc {
 }
 
 func (c *Collection[Doc, D]) Add(ctx ctx.Context, doc D) (*firestore.DocumentRef, *firestore.WriteResult, error) {
-	ctx, end := ctx.Nested("addDocument", attr.String("path", c.Ref().Path))
+	ctx, end := ctx.NestedClient("firestore.add",
+		attr.String("path", c.Ref().Path),
+		attr.String(string(semconv.DBSystemKey), "firestore"),
+		attr.String(string(semconv.DBNameKey), getDBName(c.Ref().Path)),
+		attr.String(string(semconv.DBOperationKey), "add"),
+	)
 	defer end()
 
 	transformedData, err := transformStruct(doc, true)

@@ -8,6 +8,7 @@ import (
 	"cloud.google.com/go/firestore"
 	"github.com/DimmyJing/valise/attr"
 	"github.com/DimmyJing/valise/ctx"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 )
 
 type documentInterface interface {
@@ -39,7 +40,7 @@ func (d *Doc[D]) setClient(client *firestore.Client) {
 }
 
 func (d *Doc[D]) transactionData(ctx ctx.Context, tx *firestore.Transaction) (D, error) { //nolint:ireturn
-	ctx, end := ctx.Nested("transactionData", attr.String("path", d.Ref.Path))
+	ctx, end := ctx.Nested("firestore.update.transaction.data", attr.String("path", d.Ref.Path))
 	defer end()
 
 	snap, err := tx.Get(d.Ref)
@@ -52,12 +53,23 @@ func (d *Doc[D]) transactionData(ctx ctx.Context, tx *firestore.Transaction) (D,
 	return res, ctx.FailIf(err)
 }
 
+func getDBName(path string) string {
+	splitPath := strings.Split(path, "/")
+
+	return splitPath[1] + "/" + splitPath[3]
+}
+
 func (d *Doc[D]) Trans(cctx ctx.Context, transFn func(D) (D, error)) error {
-	cctx, end := cctx.Nested("documentTransaction", attr.String("path", d.Ref.Path))
+	cctx, end := cctx.NestedClient("firestore.update",
+		attr.String("path", d.Ref.Path),
+		attr.String(string(semconv.DBSystemKey), "firestore"),
+		attr.String(string(semconv.DBNameKey), getDBName(d.Ref.Path)),
+		attr.String(string(semconv.DBOperationKey), "update"),
+	)
 	defer end()
 
 	err := d.Client.RunTransaction(cctx, func(c context.Context, txn *firestore.Transaction) error {
-		ctx, end := ctx.From(c).Nested("documentTransactionInternal")
+		ctx, end := ctx.From(c).Nested("firestore.update.transaction")
 		defer end()
 
 		data, err := d.transactionData(ctx, txn)
@@ -66,7 +78,7 @@ func (d *Doc[D]) Trans(cctx ctx.Context, transFn func(D) (D, error)) error {
 		}
 
 		data, err = func() (D, error) {
-			ctx, end := ctx.Nested("documentTransactionInternalFn")
+			ctx, end := ctx.Nested("firestore.update.transaction.transform")
 			defer end()
 
 			data, err := transFn(data)
@@ -89,7 +101,12 @@ func (d *Doc[D]) Trans(cctx ctx.Context, transFn func(D) (D, error)) error {
 }
 
 func (d *Doc[D]) Set(ctx ctx.Context, data D) (*firestore.WriteResult, error) {
-	ctx, end := ctx.Nested("setDocument", attr.String("path", d.Ref.Path))
+	ctx, end := ctx.NestedClient("firestore.set",
+		attr.String("path", d.Ref.Path),
+		attr.String(string(semconv.DBSystemKey), "firestore"),
+		attr.String(string(semconv.DBNameKey), getDBName(d.Ref.Path)),
+		attr.String(string(semconv.DBOperationKey), "set"),
+	)
 	defer end()
 
 	transformedData, err := transformStruct(data, false)
@@ -103,7 +120,12 @@ func (d *Doc[D]) Set(ctx ctx.Context, data D) (*firestore.WriteResult, error) {
 }
 
 func (d *Doc[D]) Delete(ctx ctx.Context) (*firestore.WriteResult, error) {
-	ctx, end := ctx.Nested("deleteDocument", attr.String("path", d.Ref.Path))
+	ctx, end := ctx.NestedClient("firestore.delete",
+		attr.String("path", d.Ref.Path),
+		attr.String(string(semconv.DBSystemKey), "firestore"),
+		attr.String(string(semconv.DBNameKey), getDBName(d.Ref.Path)),
+		attr.String(string(semconv.DBOperationKey), "delete"),
+	)
 	defer end()
 
 	res, err := d.Ref.Delete(ctx)

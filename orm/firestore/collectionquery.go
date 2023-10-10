@@ -8,6 +8,7 @@ import (
 	"cloud.google.com/go/firestore"
 	"github.com/DimmyJing/valise/attr"
 	"github.com/DimmyJing/valise/ctx"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"google.golang.org/api/iterator"
 )
 
@@ -132,7 +133,12 @@ func (c *Collection[Doc, D]) DocumentsIter(ctx ctx.Context) *docRefIterator[Doc]
 }
 
 func (c *Collection[Doc, D]) Documents(ctx ctx.Context) ([]Doc, error) {
-	ctx, end := ctx.Nested("listDocuments", attr.String("path", c.Ref().Path))
+	ctx, end := ctx.NestedClient("firestore.documents",
+		attr.String("path", c.Ref().Path),
+		attr.String(string(semconv.DBSystemKey), "firestore"),
+		attr.String(string(semconv.DBNameKey), getDBName(c.Ref().Path)),
+		attr.String(string(semconv.DBOperationKey), "documents"),
+	)
 	defer end()
 
 	res := make([]Doc, 0)
@@ -168,7 +174,12 @@ func (c *Collection[Doc, D]) QueryIter(ctx ctx.Context, queryFns ...func(query Q
 }
 
 func (c *Collection[Doc, D]) Query(ctx ctx.Context, queryFns ...func(query Query) Query) ([]DocSnap[Doc, D], error) {
-	ctx, end := ctx.Nested("queryDocuments", attr.String("path", c.Ref().Path))
+	ctx, end := ctx.NestedClient("firestore.query",
+		attr.String("path", c.Ref().Path),
+		attr.String(string(semconv.DBSystemKey), "firestore"),
+		attr.String(string(semconv.DBNameKey), getDBName(c.Ref().Path)),
+		attr.String(string(semconv.DBOperationKey), "query"),
+	)
 	defer end()
 
 	query := c.Ref().Query
@@ -200,7 +211,12 @@ func (c *Collection[Doc, D]) Query(ctx ctx.Context, queryFns ...func(query Query
 }
 
 func (c *Collection[Doc, D]) GetAll(ctx ctx.Context, documents []Doc) ([]DocSnapOptional[Doc, D], error) {
-	ctx, end := ctx.Nested("getAll", attr.String("path", c.Ref().Path))
+	ctx, end := ctx.NestedClient("firestore.getAll",
+		attr.String("path", c.Ref().Path),
+		attr.String(string(semconv.DBSystemKey), "firestore"),
+		attr.String(string(semconv.DBNameKey), getDBName(c.Ref().Path)),
+		attr.String(string(semconv.DBOperationKey), "getall"),
+	)
 	defer end()
 
 	docRefs := make([]*firestore.DocumentRef, len(documents))
