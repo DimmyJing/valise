@@ -100,6 +100,8 @@ func getInputFieldAttrs(inputType reflect.Type, hasBody bool) (map[string]inputF
 			switch inTag {
 			case "path":
 				fieldAttrs.inPath = true
+				fieldAttrs.inQuery = false
+
 				if fieldAttrs.isList {
 					return nil, fmt.Errorf("cannot use in:path on list field %s: %w", fieldName, errInvalidTag)
 				}

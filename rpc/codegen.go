@@ -25,7 +25,12 @@ func createStub( //nolint:funlen
 	resContentType string,
 ) (string, error) {
 	pathSplit := strings.Split(path, "/")
-	origPathName := pathSplit[len(pathSplit)-1]
+
+	origPathName := "{"
+	for splitIdx := len(pathSplit) - 1; strings.Contains(origPathName, "{"); splitIdx-- {
+		origPathName = pathSplit[splitIdx]
+	}
+
 	pathName := strings.ToUpper(string(origPathName[0])) + origPathName[1:]
 	result := ""
 
@@ -215,7 +220,7 @@ func (o *OpenAPI) CodeGen(path string) error { //nolint:cyclop
 			}
 
 			splitPath := strings.Split(key, "/")
-			fileName := splitPath[len(splitPath)-2]
+			fileName := splitPath[1]
 
 			if val, found := files[fileName]; found {
 				val = append(val, defs)
