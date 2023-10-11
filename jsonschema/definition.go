@@ -21,6 +21,14 @@ type JSONSchema struct {
 	boolean              *bool
 }
 
+type OpenAPIParameter struct {
+	Schema      *JSONSchema `json:"schema"`
+	Name        string      `json:"name"`
+	In          string      `json:"in"`
+	Description string      `json:"description,omitempty"`
+	Required    bool        `json:"required,omitempty"`
+}
+
 //nolint:gochecknoglobals,exhaustruct
 var (
 	boolean         = true

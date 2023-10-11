@@ -7,6 +7,7 @@ require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.14.2
 	github.com/charmbracelet/log v0.2.5
 	github.com/google/uuid v1.3.1
+	github.com/labstack/echo/v4 v4.11.1
 	github.com/matoous/go-nanoid/v2 v2.0.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheus v0.86.0
 	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheusremotewrite v0.86.0
@@ -50,6 +51,7 @@ require (
 	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
+	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
@@ -61,8 +63,10 @@ require (
 	github.com/knadh/koanf/maps v0.1.1 // indirect
 	github.com/knadh/koanf/providers/confmap v0.1.0 // indirect
 	github.com/knadh/koanf/v2 v2.0.1 // indirect
+	github.com/labstack/gommon v0.4.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
+	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.19 // indirect
 	github.com/mattn/go-runewidth v0.0.15 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
@@ -79,6 +83,8 @@ require (
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/segmentio/asm v1.2.0 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
+	github.com/valyala/bytebufferpool v1.0.0 // indirect
+	github.com/valyala/fasttemplate v1.2.2 // indirect
 	github.com/vearutop/statigz v1.4.0 // indirect
 	github.com/weathersource/go-errors v1.0.2 // indirect
 	go.opencensus.io v0.24.0 // indirect

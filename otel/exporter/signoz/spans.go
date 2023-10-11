@@ -388,9 +388,6 @@ func (s *signozExporter) convertSpan( //nolint:funlen,gocognit,gocyclo,cyclop,ma
 			span.MsgSystem = value.Str()
 		case key == string(semconv.MessagingOperationKey):
 			span.MsgOperation = value.Str()
-		case key == "component":
-			// TODO: figure out what to do with this
-			span.Component = value.Str()
 		case key == string(semconv.DBSystemKey):
 			span.DBSystem = value.Str()
 		case key == string(semconv.DBNameKey):

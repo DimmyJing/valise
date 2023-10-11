@@ -112,3 +112,51 @@ func TestSchemaError(t *testing.T) {
 	}))
 	assert.Error(t, err)
 }
+
+type TestSchema2 struct {
+	//nolint:unused
+	hello string
+	Hello string
+	//nolint:tagalign
+	Hello2 string `json:"hello5" in:"path"`
+	Hello3 string `json:"-"`
+	Hello4 string `json:"hello4,omitempty"`
+}
+
+type TestSchema3 struct {
+	Hello string `in:"hello"`
+}
+
+type TestSchema4 struct {
+	Hello complex64
+}
+
+func TestParamReflect(t *testing.T) {
+	t.Parallel()
+
+	//nolint:exhaustruct
+	schema, err := jsonschema.ParametersToSchema(reflect.TypeOf(TestSchema2{}))
+	assert.NoError(t, err)
+	assert.Equal(t, "hello", schema[0].Name)
+	assert.Equal(t, "query", schema[0].In)
+	assert.Equal(t, true, schema[0].Required)
+	assert.Equal(t, "string", schema[0].Schema.Type)
+
+	assert.Equal(t, "hello5", schema[1].Name)
+	assert.Equal(t, "path", schema[1].In)
+	assert.Equal(t, true, schema[1].Required)
+	assert.Equal(t, "string", schema[1].Schema.Type)
+
+	assert.Equal(t, "hello4", schema[2].Name)
+	assert.Equal(t, "query", schema[2].In)
+	assert.Equal(t, false, schema[2].Required)
+	assert.Equal(t, "string", schema[2].Schema.Type)
+
+	//nolint:exhaustruct
+	_, err = jsonschema.ParametersToSchema(reflect.TypeOf(TestSchema3{}))
+	assert.Error(t, err)
+
+	//nolint:exhaustruct
+	_, err = jsonschema.ParametersToSchema(reflect.TypeOf(TestSchema4{}))
+	assert.Error(t, err)
+}

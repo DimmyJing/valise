@@ -3,15 +3,16 @@ package rpc
 import (
 	"net/http"
 
+	"github.com/labstack/echo/v4"
 	"github.com/swaggest/swgui"
 	"github.com/swaggest/swgui/v5emb"
 )
 
-func (r *Router) ServeSwaggerUI(spec []byte, userID string) error {
+func ServeSwaggerUI(ech *echo.Echo, title string, spec []byte, userID string) {
 	requestInterceptor := `(req) => { req.headers["Authorization"] = "Bearer ` + userID + `" }`
 	//nolint:exhaustruct
-	r.mux.Handle("/", v5emb.NewHandlerWithConfig(swgui.Config{
-		Title:       r.document.Info.Title,
+	ech.Any("/*", echo.WrapHandler(v5emb.NewHandlerWithConfig(swgui.Config{
+		Title:       title,
 		SwaggerJSON: "/swagger.json",
 		BasePath:    "/",
 		HideCurl:    true,
@@ -19,10 +20,9 @@ func (r *Router) ServeSwaggerUI(spec []byte, userID string) error {
 			"tryItOutEnabled":    "true",
 			"requestInterceptor": requestInterceptor,
 		},
-	}))
-	r.mux.Handle("/swagger.json", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write(spec)
-	}))
-
-	return nil
+	})))
+	ech.GET("/swagger.json", func(c echo.Context) error {
+		//nolint:wrapcheck
+		return c.JSONBlob(http.StatusOK, spec)
+	})
 }

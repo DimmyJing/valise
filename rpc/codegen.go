@@ -1,3 +1,5 @@
+// TODO: everything
+
 package rpc
 
 import (
@@ -5,117 +7,160 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/DimmyJing/valise/jsonschema"
 	orderedmap "github.com/wk8/go-ordered-map/v2"
 )
 
-func createStub(
+func createStub( //nolint:funlen
 	path string,
 	method string,
 	description string,
-	req jsonschema.JSONSchema,
-	res jsonschema.JSONSchema,
+	requestBody *jsonschema.JSONSchema,
+	req *jsonschema.JSONSchema,
+	res *jsonschema.JSONSchema,
+	reqContentType string,
+	resContentType string,
 ) (string, error) {
 	pathSplit := strings.Split(path, "/")
 	origPathName := pathSplit[len(pathSplit)-1]
 	pathName := strings.ToUpper(string(origPathName[0])) + origPathName[1:]
+	result := ""
 
-	inputType, err := jsonschema.JSONSchemaToTS(&req, "export type "+pathName+"Input = ")
+	if requestBody != nil {
+		inputBodyType, err := jsonschema.JSONSchemaToTS(requestBody, "export type "+pathName+"RequestBody = ")
+		if err != nil {
+			return "", fmt.Errorf("failed to convert json schema to ts: %w", err)
+		}
+
+		result += inputBodyType + "\n\n"
+	}
+
+	if req != nil {
+		inputType, err := jsonschema.JSONSchemaToTS(req, "export type "+pathName+"Request = ")
+		if err != nil {
+			return "", fmt.Errorf("failed to convert json schema to ts: %w", err)
+		}
+
+		result += inputType + "\n\n"
+	}
+
+	outputType, err := jsonschema.JSONSchemaToTS(res, "export type "+pathName+"Response = ")
 	if err != nil {
 		return "", fmt.Errorf("failed to convert json schema to ts: %w", err)
 	}
 
-	outputType, err := jsonschema.JSONSchemaToTS(&res, "export type "+pathName+"Output = ")
-	if err != nil {
-		return "", fmt.Errorf("failed to convert json schema to ts: %w", err)
+	result += outputType + "\n\n"
+
+	result += jsonschema.FormatComment(description) + "export type " + pathName + " = {"
+
+	if requestBody != nil {
+		result += "\n  body: " + pathName + "RequestBody,"
 	}
 
-	operation := fmt.Sprintf(
-		"%sexport type %s = {\n  input: %sInput,\n  output: %sOutput,\n  method: \"%s\",\n  path: \"%s\",\n}\n",
-		jsonschema.FormatComment(description), pathName, pathName, pathName, method, path,
-	)
+	if req != nil {
+		result += "\n  query: " + pathName + "Request,"
+	}
 
-	types := fmt.Sprintf("%s\n\n%s\n\n%s", inputType, outputType, operation)
+	result += "\n  response: " + pathName + "Response,"
+	result += "\n  method: \"" + method + "\","
+	result += "\n  path: \"" + path + "\","
 
-	return types, nil
+	if reqContentType != "" {
+		result += "\n  requestContentType: \"" + reqContentType + "\","
+	}
+
+	if resContentType != "" {
+		result += "\n  responseContentType: \"" + resContentType + "\","
+	}
+
+	result += "\n}\n"
+
+	return result, nil
 }
 
 var errUnsupportedMethod = errors.New("unsupported method")
 
-func processPath(path openAPIPathItem, pathString string) (string, error) { //nolint:funlen,cyclop
-	var (
-		method    string
-		operation openAPIOperation
-	)
-
-	switch {
-	case path.Get != nil:
-		//nolint:goconst
-		method = "get"
-		operation = path.Get.openAPIOperation
-	case path.Post != nil:
-		//nolint:goconst
-		method = "post"
-		operation = path.Post.openAPIOperation
-	case path.Put != nil:
-		//nolint:goconst
-		method = "put"
-		operation = path.Put.openAPIOperation
-	case path.Delete != nil:
-		//nolint:goconst
-		method = "delete"
-		operation = path.Delete.openAPIOperation
-	default:
-		return "", errUnsupportedMethod
-	}
-
+func processPath(operation openAPIOperation, method string, pathString string) (string, error) { //nolint:funlen,cyclop
 	operationDescription := operation.Description
 
-	var requestSchema jsonschema.JSONSchema
+	var (
+		requestBodySchema   *jsonschema.JSONSchema
+		requestSchema       *jsonschema.JSONSchema
+		requestContentType  string
+		responseSchema      *jsonschema.JSONSchema
+		responseContentType string
+	)
 
-	//nolint:nestif
-	if method == "get" || method == "delete" {
-		var params []openAPIParameter
-		if method == "get" {
-			params = path.Get.Parameters
-		} else if method == "delete" {
-			params = path.Delete.Parameters
+	if slices.Contains(hasBodyMethods, strings.ToUpper(method)) {
+		body := operation.RequestBody
+
+		if len(body.Content) != 1 {
+			return "", fmt.Errorf("unsupported number of content types %d: %w", len(body.Content), errUnsupportedMethod)
 		}
 
-		requestSchema.Type = "object"
-		requestSchema.Properties = orderedmap.New[string, *jsonschema.JSONSchema]()
-		requestSchema.AdditionalProperties = &jsonschema.JSONSchemaFalse
-
-		for _, param := range params {
-			schema := param.Schema
-			requestSchema.Properties.Set(param.Name, &schema)
-
-			if param.Description != "" {
-				schema.Description = param.Description
-			}
-
-			if param.Required {
-				requestSchema.Required = append(requestSchema.Required, param.Name)
-			}
+		for key, val := range body.Content {
+			schema := val.Schema
+			requestContentType = key
+			requestBodySchema = &schema
 		}
-	} else if method == "post" || method == "put" {
-		var body openAPIRequestBody
-
-		if method == "post" {
-			body = path.Post.RequestBody
-		} else if method == "put" {
-			body = path.Put.RequestBody
-		}
-		requestSchema = body.Content["application/json"].Schema
 
 		if body.Description != "" {
-			requestSchema.Description = body.Description
+			requestBodySchema.Description = body.Description
 		}
 	}
 
-	responseSchema := operation.Responses["200"].Content["application/json"].Schema
+	params := operation.Parameters
+	requestSet := false
+
+	for _, param := range params {
+		if param.In != "query" {
+			continue
+		}
+
+		if !requestSet {
+			requestSet = true
+			//nolint:exhaustruct
+			requestSchema = &jsonschema.JSONSchema{
+				Type:                 "object",
+				Properties:           orderedmap.New[string, *jsonschema.JSONSchema](),
+				AdditionalProperties: &jsonschema.JSONSchemaFalse,
+			}
+		}
+
+		schema := param.Schema
+		requestSchema.Properties.Set(param.Name, schema)
+
+		if param.Description != "" {
+			schema.Description = param.Description
+		}
+
+		if param.Required {
+			requestSchema.Required = append(requestSchema.Required, param.Name)
+		}
+	}
+
+	if !requestSet && requestBodySchema == nil {
+		//nolint:exhaustruct
+		requestSchema = &jsonschema.JSONSchema{
+			Type:                 "object",
+			Properties:           orderedmap.New[string, *jsonschema.JSONSchema](),
+			AdditionalProperties: &jsonschema.JSONSchemaFalse,
+		}
+	}
+
+	if len(operation.Responses["200"].Content) != 1 {
+		return "", fmt.Errorf("unsupported number of content types %d: %w",
+			len(operation.Responses["200"].Content), errUnsupportedMethod)
+	}
+
+	for key, val := range operation.Responses["200"].Content {
+		schema := val.Schema
+		responseContentType = key
+		responseSchema = &schema
+	}
 
 	if operation.Responses["200"].Description != "" {
 		responseSchema.Description = operation.Responses["200"].Description
@@ -125,8 +170,11 @@ func processPath(path openAPIPathItem, pathString string) (string, error) { //no
 		pathString,
 		method,
 		operationDescription,
+		requestBodySchema,
 		requestSchema,
 		responseSchema,
+		requestContentType,
+		responseContentType,
 	)
 	if err != nil {
 		return "", fmt.Errorf("failed to create stub: %w", err)
@@ -135,7 +183,7 @@ func processPath(path openAPIPathItem, pathString string) (string, error) { //no
 	return defs, nil
 }
 
-func (r *Router) CodeGen(path string) error { //nolint:cyclop
+func (o *OpenAPI) CodeGen(path string) error { //nolint:cyclop
 	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
 		//nolint:gomnd
 		err := os.Mkdir(path, 0o755)
@@ -144,7 +192,7 @@ func (r *Router) CodeGen(path string) error { //nolint:cyclop
 		}
 	}
 
-	if val, err := r.Document(); err == nil {
+	if val, err := o.Document(); err == nil {
 		//nolint:gosec,gomnd
 		err := os.WriteFile(filepath.Join(path, "swagger.json"), val, 0o644)
 		if err != nil {
@@ -154,25 +202,27 @@ func (r *Router) CodeGen(path string) error { //nolint:cyclop
 		return err
 	}
 
-	doc := r.document
+	doc := o.document
 	files := make(map[string][]string)
 
 	for pair := doc.Paths.Oldest(); pair != nil; pair = pair.Next() {
 		key, path := pair.Key, pair.Value
 
-		defs, err := processPath(path, key)
-		if err != nil {
-			return err
-		}
+		for method, pathItem := range path {
+			defs, err := processPath(pathItem, method, key)
+			if err != nil {
+				return err
+			}
 
-		splitPath := strings.Split(key, "/")
-		fileName := splitPath[len(splitPath)-2]
+			splitPath := strings.Split(key, "/")
+			fileName := splitPath[len(splitPath)-2]
 
-		if val, found := files[fileName]; found {
-			val = append(val, defs)
-			files[fileName] = val
-		} else {
-			files[fileName] = []string{defs}
+			if val, found := files[fileName]; found {
+				val = append(val, defs)
+				files[fileName] = val
+			} else {
+				files[fileName] = []string{defs}
+			}
 		}
 	}
 

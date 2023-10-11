@@ -1,31 +1,17 @@
 package ctx
 
 import (
-	"net/http"
+	"github.com/labstack/echo/v4"
 )
 
 const (
-	httpWriterKey  contextKey = "httpResponseWriter"
-	httpRequestKey contextKey = "httpRequest"
-	httpRouteKey   contextKey = "httpRoute"
+	echoContextKey contextKey = "echoContext"
 )
 
-func FromHTTP(w http.ResponseWriter, r *http.Request) Context {
-	return From(r.Context()).WithValue(httpWriterKey, w).WithValue(httpRequestKey, r)
+func (c Context) WithEcho(e echo.Context) Context {
+	return c.WithValue(echoContextKey, e)
 }
 
-func (c Context) GetRequest() (*http.Request, bool) {
-	return Value[*http.Request](c, httpRequestKey)
-}
-
-func (c Context) GetResponseWriter() (http.ResponseWriter, bool) {
-	return Value[http.ResponseWriter](c, httpWriterKey)
-}
-
-func (c Context) WithRoute(route string) Context {
-	return c.WithValue(httpRouteKey, route)
-}
-
-func (c Context) GetRoute() (string, bool) {
-	return Value[string](c, httpRouteKey)
+func (c Context) Echo() (echo.Context, bool) { //nolint:ireturn
+	return Value[echo.Context](c, echoContextKey)
 }

@@ -1,6 +1,7 @@
 package jsonschema
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"slices"
@@ -91,16 +92,21 @@ func convertType(value reflect.Type) (*JSONSchema, error) { //nolint:funlen,goco
 
 		return val, nil
 	case reflect.Slice:
-		schema.Type = "array"
+		if value.Elem().Kind() == reflect.Uint8 {
+			//nolint:goconst
+			schema.Type = "string"
+			schema.Format = "binary"
+		} else {
+			schema.Type = "array"
 
-		val, err := convertType(value.Elem())
-		if err != nil {
-			return nil, fmt.Errorf("error converting slice element type: %w", err)
+			val, err := convertType(value.Elem())
+			if err != nil {
+				return nil, fmt.Errorf("error converting slice element type: %w", err)
+			}
+
+			schema.Items = val
 		}
-
-		schema.Items = val
 	case reflect.String:
-		//nolint:goconst
 		schema.Type = "string"
 
 		if value.Implements(enumInterface) {
@@ -179,4 +185,137 @@ func convertType(value reflect.Type) (*JSONSchema, error) { //nolint:funlen,goco
 
 func AnyToSchema(value reflect.Type) (*JSONSchema, error) {
 	return convertType(value)
+}
+
+var errInvalidTag = errors.New("invalid tag")
+
+func RequestBodyToSchema(value reflect.Type) (*JSONSchema, error) { //nolint:funlen,cyclop
+	if value.Kind() != reflect.Struct {
+		return nil, fmt.Errorf("invalid reflect type %s, expected struct: %w", value.Kind().String(), errReflectType)
+	}
+
+	var schema JSONSchema
+
+	if desc, found := getDescription(value.PkgPath(), value.Name(), ""); found {
+		schema.Description = desc
+	}
+
+	schema.Title = value.Name()
+	schema.Type = "object"
+
+	for i := 0; i < value.NumField(); i++ {
+		field := value.Field(i)
+		if !field.IsExported() {
+			continue
+		}
+
+		fieldName := strings.ToLower(string(field.Name[0])) + field.Name[1:]
+		optional := false
+
+		//nolint:nestif
+		if jsonTag, found := field.Tag.Lookup("json"); found {
+			splitTags := strings.Split(jsonTag, ",")
+			if len(splitTags) > 0 {
+				if splitTags[0] == "-" && len(splitTags) == 1 {
+					continue
+				} else if splitTags[0] != "" {
+					fieldName = splitTags[0]
+				}
+			}
+
+			if slices.Contains(splitTags[1:], "omitempty") {
+				optional = true
+			}
+		}
+
+		if _, found := field.Tag.Lookup("in"); found {
+			continue
+		}
+
+		if schema.Properties == nil {
+			schema.Properties = orderedmap.New[string, *JSONSchema]()
+		}
+
+		property, err := AnyToSchema(field.Type)
+		if err != nil {
+			return nil, fmt.Errorf("error converting struct field %s: %w", fieldName, err)
+		}
+
+		if desc, found := getDescription(value.PkgPath(), value.Name(), field.Name); found {
+			property.Description = desc
+		}
+
+		property.Title = fieldName
+
+		schema.Properties.Set(fieldName, property)
+
+		if !optional {
+			schema.Required = append(schema.Required, fieldName)
+		}
+	}
+
+	schema.AdditionalProperties = &JSONSchemaFalse
+
+	return &schema, nil
+}
+
+func ParametersToSchema(value reflect.Type, defaultToQuery bool) ([]OpenAPIParameter, error) { //nolint:cyclop
+	params := []OpenAPIParameter{}
+
+	for i := 0; i < value.NumField(); i++ {
+		field := value.Field(i)
+		if !field.IsExported() {
+			continue
+		}
+
+		fieldName := strings.ToLower(string(field.Name[0])) + field.Name[1:]
+		optional := false
+		paramIn := "query"
+
+		//nolint:nestif
+		if jsonTag, found := field.Tag.Lookup("json"); found {
+			splitTags := strings.Split(jsonTag, ",")
+			if len(splitTags) > 0 {
+				if splitTags[0] == "-" && len(splitTags) == 1 {
+					continue
+				} else if splitTags[0] != "" {
+					fieldName = splitTags[0]
+				}
+			}
+
+			if slices.Contains(splitTags[1:], "omitempty") {
+				optional = true
+			}
+		}
+
+		if inTag, found := field.Tag.Lookup("in"); found {
+			if inTag != "path" && inTag != "query" {
+				return nil, fmt.Errorf("invalid value for in tag %s: %w", inTag, errInvalidTag)
+			}
+
+			paramIn = inTag
+		} else if !defaultToQuery {
+			continue
+		}
+
+		property, err := convertType(field.Type)
+		if err != nil {
+			return nil, fmt.Errorf("error converting struct field %s: %w", fieldName, err)
+		}
+
+		desc, _ := getDescription(value.PkgPath(), value.Name(), field.Name)
+		property.Description = desc
+
+		property.Title = fieldName
+
+		params = append(params, OpenAPIParameter{
+			Schema:      property,
+			Name:        fieldName,
+			In:          paramIn,
+			Description: property.Description,
+			Required:    !optional,
+		})
+	}
+
+	return params, nil
 }

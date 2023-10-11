@@ -1,151 +1,248 @@
 package rpc
 
 import (
-	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"reflect"
+	"slices"
 	"strings"
 
 	"github.com/DimmyJing/valise/ctx"
 	"github.com/DimmyJing/valise/jsonschema"
+	"github.com/labstack/echo/v4"
 )
 
-func registerHandler( //nolint:funlen,gocognit,cyclop
-	routerProc routerProcedure,
-	paths []string,
-	mux *http.ServeMux,
-	document *openAPIObject,
-) error {
-	path := routerProc.path
-	proc := routerProc.procedure
-	newPath := "/" + strings.Join(paths, "/") + "/" + path
-	method := proc.method
-
-	handlerFn := reflect.ValueOf(proc.handler)
+func isRPCHandler(handler any) (reflect.Type, reflect.Type, bool) {
+	handlerFn := reflect.ValueOf(handler)
 	handlerFnType := handlerFn.Type()
 
-	inputMsg := reflect.Zero(handlerFnType.In(0)).Type()
-	outputMsg := reflect.Zero(handlerFnType.Out(0)).Type()
+	if handlerFnType.Kind() != reflect.Func {
+		return nil, nil, false
+	}
 
-	inputIsList := map[string]bool{}
+	//nolint:gomnd
+	if handlerFnType.NumIn() != 2 {
+		return nil, nil, false
+	}
 
-	for i := 0; i < inputMsg.NumField(); i++ {
-		field := inputMsg.Field(i)
+	//nolint:gomnd
+	if handlerFnType.NumOut() != 2 {
+		return nil, nil, false
+	}
+
+	if handlerFnType.Out(0).Kind() != reflect.Struct {
+		outType := handlerFnType.Out(0)
+		if outType.Kind() != reflect.Slice && outType.Elem().Kind() != reflect.Uint8 {
+			return nil, nil, false
+		}
+	}
+
+	if !handlerFnType.Out(1).Implements(reflect.TypeOf((*error)(nil)).Elem()) {
+		return nil, nil, false
+	}
+
+	if handlerFnType.In(0).Kind() != reflect.Struct {
+		return nil, nil, false
+	}
+
+	if handlerFnType.In(1) != reflect.TypeOf(ctx.FromBackground()) {
+		return nil, nil, false
+	}
+
+	return handlerFnType.In(0), handlerFnType.Out(0), true
+}
+
+type inputFieldAttrs struct {
+	isList  bool
+	isBytes bool
+	typ     reflect.Type
+	inPath  bool
+	inQuery bool
+}
+
+var errInvalidTag = errors.New("invalid in tag")
+
+func getInputFieldAttrs(inputType reflect.Type, hasBody bool) (map[string]inputFieldAttrs, error) { //nolint:cyclop
+	inputFieldAttrsMap := map[string]inputFieldAttrs{}
+
+	for i := 0; i < inputType.NumField(); i++ {
+		field := inputType.Field(i)
 		if !field.IsExported() {
 			continue
 		}
 
-		//nolint:nestif
-		if field.Type.Kind() == reflect.Slice || field.Type.Kind() == reflect.Array {
-			fieldName := strings.ToLower(string(field.Name[0])) + field.Name[1:]
+		fieldAttrs := inputFieldAttrs{typ: field.Type, isList: false, inPath: false, inQuery: !hasBody, isBytes: false}
+		fieldName := strings.ToLower(string(field.Name[0])) + field.Name[1:]
 
-			if jsonTag, found := field.Tag.Lookup("json"); found {
-				splitTags := strings.Split(jsonTag, ",")
-				if len(splitTags) > 0 {
-					if splitTags[0] == "-" && len(splitTags) == 1 {
-						continue
-					} else if splitTags[0] != "" {
-						fieldName = splitTags[0]
-					}
+		if jsonTag, found := field.Tag.Lookup("json"); found {
+			splitTags := strings.Split(jsonTag, ",")
+			if len(splitTags) > 0 {
+				if splitTags[0] == "-" && len(splitTags) == 1 {
+					continue
+				} else if splitTags[0] != "" {
+					fieldName = splitTags[0]
 				}
 			}
+		}
 
-			inputIsList[fieldName] = true
+		if field.Type.Kind() == reflect.Slice || field.Type.Kind() == reflect.Array {
+			fieldAttrs.isList = true
+		}
+
+		if field.Type.Kind() == reflect.Slice && field.Type.Elem().Kind() == reflect.Uint8 {
+			fieldAttrs.isBytes = true
+		}
+
+		if inTag, found := field.Tag.Lookup("in"); found {
+			switch inTag {
+			case "path":
+				fieldAttrs.inPath = true
+				if fieldAttrs.isList {
+					return nil, fmt.Errorf("cannot use in:path on list field %s: %w", fieldName, errInvalidTag)
+				}
+			case "query":
+				fieldAttrs.inQuery = true
+			default:
+				return nil, fmt.Errorf("invalid in tag %s: %w", inTag, errInvalidTag)
+			}
+		}
+
+		inputFieldAttrsMap[fieldName] = fieldAttrs
+	}
+
+	return inputFieldAttrsMap, nil
+}
+
+func parseInput( //nolint:funlen,gocognit,cyclop
+	inputFieldAttrsMap map[string]inputFieldAttrs,
+	hasBody bool,
+	requestContentType string,
+	echoCtx echo.Context,
+	ctx ctx.Context,
+	inputType reflect.Type,
+) (reflect.Value, error) {
+	inputValue := reflect.New(inputType).Elem()
+
+	inputMap := make(map[string]any)
+
+	//nolint:nestif
+	if hasBody {
+		if requestContentType == echo.MIMEApplicationJSON {
+			err := json.NewDecoder(echoCtx.Request().Body).Decode(&inputMap)
+			if err != nil {
+				return inputValue, ctx.Fail(fmt.Errorf("error decoding input json: %w", err))
+			}
+		} else if requestContentType == echo.MIMEMultipartForm || requestContentType == echo.MIMEApplicationForm {
+			for key, value := range inputFieldAttrsMap {
+				if value.inQuery || value.inPath {
+					continue
+				}
+
+				values, err := echoCtx.FormParams()
+				if err != nil {
+					values = make(map[string][]string)
+				}
+
+				switch {
+				case !value.isBytes && !value.isList:
+					formVal := echoCtx.FormValue(key)
+					if formVal != "" {
+						inputMap[key] = formVal
+					}
+				case !value.isBytes:
+					if val, ok := values[key]; ok {
+						inputMap[key] = val
+					}
+				default:
+					fileHeader, err := echoCtx.FormFile(key)
+					if err != nil {
+						return inputValue, ctx.Fail(fmt.Errorf("error getting form file %s: %w", key, err))
+					}
+
+					file, err := fileHeader.Open()
+					if err != nil {
+						return inputValue, ctx.Fail(fmt.Errorf("error opening form file %s: %w", key, err))
+					}
+
+					res, err := io.ReadAll(file)
+					if err != nil {
+						return inputValue, ctx.Fail(fmt.Errorf("error reading form file %s: %w", key, err))
+					}
+
+					inputMap[key] = res
+				}
+			}
 		}
 	}
 
-	httpHandlerFn := func(ctx ctx.Context) error {
-		request, _ := ctx.GetRequest()
-		writer, _ := ctx.GetResponseWriter()
+	values := echoCtx.QueryParams()
 
-		if request.Method != proc.method {
-			return ctx.Fail(NewHTTPError(http.StatusMethodNotAllowed,
-				fmt.Errorf("%s not allowed on %s: %w", request.Method, newPath, errMethodNotAllowed),
-			))
-		}
-
-		inputValue := reflect.New(inputMsg).Elem()
-
-		var inputAny any
-
+	for key, value := range inputFieldAttrsMap {
 		//nolint:nestif
-		if method == http.MethodGet || method == http.MethodDelete {
-			buf := bytes.Buffer{}
-			buf.WriteString("{")
-
-			values := request.URL.Query()
-
-			isFirst := true
-			for key, value := range values {
-				if !isFirst {
-					buf.WriteString(",")
-				} else {
-					isFirst = false
+		if value.inQuery {
+			if value.isList {
+				if val, ok := values[key]; ok {
+					inputMap[key] = val
 				}
-
-				buf.WriteString(fmt.Sprintf("\"%s\":", key))
-
-				if val, ok := inputIsList[key]; ok && val {
-					valBuf, err := json.Marshal(value)
-					if err != nil {
-						return ctx.Fail(NewHTTPError(http.StatusBadRequest,
-							fmt.Errorf("error marshaling input %v for %s: %w", value, key, err),
-						))
-					}
-
-					buf.Write(valBuf)
-				} else if len(value) == 1 {
-					valBuf, err := json.Marshal(value[0])
-					if err != nil {
-						return ctx.Fail(NewHTTPError(http.StatusBadRequest,
-							fmt.Errorf("error marshaling input %v for %s: %w", value, key, err),
-						))
-					}
-					buf.Write(valBuf)
-				} else {
-					return ctx.Fail(NewHTTPError(http.StatusBadRequest,
-						fmt.Errorf("expect value for %s, but got list %v: %w", key, value, errBadInput),
-					))
-				}
+			} else {
+				inputMap[key] = echoCtx.QueryParam(key)
 			}
-
-			buf.WriteString("}")
-
-			err := json.Unmarshal(buf.Bytes(), &inputAny)
-			if err != nil {
-				return ctx.Fail(NewHTTPError(http.StatusBadRequest,
-					fmt.Errorf("error unmarshaling input %v: %w", buf.String(), err),
-				))
-			}
-		} else {
-			inputBody, err := io.ReadAll(request.Body)
-			if err != nil {
-				return ctx.Fail(NewHTTPError(http.StatusBadRequest, fmt.Errorf("error reading body: %w", err)))
-			}
-
-			err = json.Unmarshal(inputBody, &inputAny)
-			if err != nil {
-				return ctx.Fail(NewHTTPError(http.StatusBadRequest, fmt.Errorf("error unmarshaling input: %w", err)))
+		} else if value.inPath {
+			if param := echoCtx.Param(key); param != "" {
+				inputMap[key] = param
 			}
 		}
+	}
 
-		err := jsonschema.AnyToValue(inputAny, inputValue)
+	err := jsonschema.AnyToValue(inputMap, inputValue)
+	if err != nil {
+		return inputValue, ctx.Fail(fmt.Errorf("error converting input %v: %w", inputMap, err))
+	}
+
+	return inputValue, nil
+}
+
+func createRPCHandler( //nolint:funlen
+	handler any,
+	method string,
+	inputType reflect.Type,
+	requestContentType string,
+	responseContentType string,
+) (echo.HandlerFunc, error) {
+	hasBody := slices.Contains(hasBodyMethods, method)
+
+	inputFieldAttrsMap, err := getInputFieldAttrs(inputType, hasBody)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get input field attrs: %w", err)
+	}
+
+	handlerValue := reflect.ValueOf(handler)
+
+	return echo.HandlerFunc(func(echoCtx echo.Context) error {
+		ctx := FromEchoContext(echoCtx).ctx
+
+		inputValue, err := parseInput(
+			inputFieldAttrsMap,
+			hasBody,
+			requestContentType,
+			echoCtx,
+			ctx,
+			inputType,
+		)
 		if err != nil {
-			return ctx.Fail(NewHTTPError(http.StatusBadRequest,
-				fmt.Errorf("error converting input %v: %w", inputAny, err),
-			))
+			return ctx.Fail(NewInternalHTTPError(http.StatusBadRequest, err))
 		}
 
-		out := handlerFn.Call([]reflect.Value{inputValue, reflect.ValueOf(ctx)})
+		out := handlerValue.Call([]reflect.Value{inputValue, reflect.ValueOf(ctx)})
 		if !out[1].IsNil() {
 			if err, ok := out[1].Interface().(error); ok {
-				return ctx.Fail(NewHTTPError(http.StatusInternalServerError, err))
+				return ctx.Fail(NewInternalHTTPError(http.StatusInternalServerError, err))
 			} else {
 				//nolint:goerr113
-				return ctx.Fail(NewHTTPError(http.StatusInternalServerError,
+				return ctx.Fail(NewInternalHTTPError(http.StatusInternalServerError,
 					fmt.Errorf("non-error value returned from handler: %v", out[1].Interface()),
 				))
 			}
@@ -155,32 +252,27 @@ func registerHandler( //nolint:funlen,gocognit,cyclop
 
 		outRes, err := jsonschema.ValueToAny(reflect.ValueOf(output))
 		if err != nil {
-			return ctx.Fail(NewHTTPError(http.StatusInternalServerError,
+			return ctx.Fail(NewInternalHTTPError(http.StatusInternalServerError,
 				fmt.Errorf("error converting output %v: %w", output, err),
 			))
 		}
 
-		if result, err := json.Marshal(outRes); err == nil {
-			writer.Header().Set("Content-Type", "application/json")
-
-			if _, err = writer.Write(result); err != nil {
-				return ctx.Fail(NewHTTPError(http.StatusInternalServerError, err))
+		if responseContentType == echo.MIMEApplicationJSON {
+			err := echoCtx.JSON(http.StatusOK, outRes)
+			if err != nil {
+				return ctx.Fail(NewInternalHTTPError(http.StatusInternalServerError, fmt.Errorf("error writing response: %w", err)))
+			}
+		} else if bytes, ok := outRes.([]byte); ok {
+			err := echoCtx.Blob(http.StatusOK, responseContentType, bytes)
+			if err != nil {
+				return ctx.Fail(NewInternalHTTPError(http.StatusInternalServerError, fmt.Errorf("error writing response: %w", err)))
 			}
 		} else {
-			return ctx.Fail(NewHTTPError(http.StatusInternalServerError, fmt.Errorf("error marshaling output: %w", err)))
+			return ctx.Fail(NewInternalHTTPError(http.StatusInternalServerError,
+				fmt.Errorf("invalid output type %T for content type %s: %w", output, responseContentType, err),
+			))
 		}
 
 		return nil
-	}
-
-	mux.Handle(newPath, applyMiddlewares(httpHandlerFn, proc.middlewares, newPath))
-
-	proc.tags = append(proc.tags, strings.Join(paths, "/"))
-
-	err := document.addOperation(newPath, inputMsg, outputMsg, method, proc.description, proc.tags)
-	if err != nil {
-		return fmt.Errorf("failed to add operation: %w", err)
-	}
-
-	return nil
+	}), nil
 }
