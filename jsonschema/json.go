@@ -368,6 +368,12 @@ func AnyToValue(anyVal any, value reflect.Value) error { //nolint:funlen,gocogni
 		if _, isTime := value.Interface().(time.Time); isTime {
 			if timeVal, isTimeVal := anyVal.(time.Time); isTimeVal {
 				value.Set(reflect.ValueOf(timeVal))
+			} else if stringVal, isStringVal := anyVal.(string); isStringVal {
+				if timeVal, err := time.Parse(time.RFC3339, stringVal); err != nil {
+					return fmt.Errorf("invalid time string value %s: %w", stringVal, errReflectType)
+				} else {
+					value.Set(reflect.ValueOf(timeVal))
+				}
 			} else {
 				return fmt.Errorf("invalid time value %v: %w", anyVal, errReflectType)
 			}
