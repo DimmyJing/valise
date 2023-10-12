@@ -135,7 +135,7 @@ func TestParamReflect(t *testing.T) {
 	t.Parallel()
 
 	//nolint:exhaustruct
-	schema, err := jsonschema.ParametersToSchema(reflect.TypeOf(TestSchema2{}))
+	schema, err := jsonschema.ParametersToSchema(reflect.TypeOf(TestSchema2{}), true)
 	assert.NoError(t, err)
 	assert.Equal(t, "hello", schema[0].Name)
 	assert.Equal(t, "query", schema[0].In)
@@ -153,10 +153,10 @@ func TestParamReflect(t *testing.T) {
 	assert.Equal(t, "string", schema[2].Schema.Type)
 
 	//nolint:exhaustruct
-	_, err = jsonschema.ParametersToSchema(reflect.TypeOf(TestSchema3{}))
+	_, err = jsonschema.ParametersToSchema(reflect.TypeOf(TestSchema3{}), true)
 	assert.Error(t, err)
 
 	//nolint:exhaustruct
-	_, err = jsonschema.ParametersToSchema(reflect.TypeOf(TestSchema4{}))
+	_, err = jsonschema.ParametersToSchema(reflect.TypeOf(TestSchema4{}), true)
 	assert.Error(t, err)
 }

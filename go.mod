@@ -7,10 +7,10 @@ require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.14.2
 	github.com/charmbracelet/log v0.2.5
 	github.com/google/uuid v1.3.1
-	github.com/labstack/echo/v4 v4.11.1
+	github.com/labstack/echo/v4 v4.11.2
 	github.com/matoous/go-nanoid/v2 v2.0.0
-	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheus v0.86.0
-	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheusremotewrite v0.86.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheus v0.87.0
+	github.com/open-telemetry/opentelemetry-collector-contrib/pkg/translator/prometheusremotewrite v0.87.0
 	github.com/prometheus/common v0.44.0
 	github.com/prometheus/prometheus v0.47.1
 	github.com/sanity-io/litter v1.5.5
@@ -19,17 +19,17 @@ require (
 	github.com/swaggest/swgui v1.7.4
 	github.com/weathersource/go-gsrv v1.0.2
 	github.com/wk8/go-ordered-map/v2 v2.1.8
-	go.opentelemetry.io/collector/component v0.86.0
-	go.opentelemetry.io/collector/consumer v0.86.0
-	go.opentelemetry.io/collector/exporter v0.86.0
-	go.opentelemetry.io/collector/pdata v1.0.0-rcv0015
+	go.opentelemetry.io/collector/component v0.87.0
+	go.opentelemetry.io/collector/consumer v0.87.0
+	go.opentelemetry.io/collector/exporter v0.87.0
+	go.opentelemetry.io/collector/pdata v1.0.0-rcv0016
 	go.opentelemetry.io/otel v1.19.0
 	go.opentelemetry.io/otel/metric v1.19.0
 	go.opentelemetry.io/otel/sdk v1.19.0
 	go.opentelemetry.io/otel/sdk/metric v1.19.0
 	go.opentelemetry.io/otel/trace v1.19.0
 	google.golang.org/api v0.146.0
-	google.golang.org/grpc v1.58.2
+	google.golang.org/grpc v1.58.3
 	google.golang.org/protobuf v1.31.0
 )
 
@@ -43,7 +43,7 @@ require (
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
-	github.com/charmbracelet/lipgloss v0.8.0 // indirect
+	github.com/charmbracelet/lipgloss v0.9.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/go-faster/city v1.0.1 // indirect
 	github.com/go-faster/errors v0.6.1 // indirect
@@ -54,7 +54,7 @@ require (
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
-	github.com/google/go-cmp v0.5.9 // indirect
+	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/s2a-go v0.1.7 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.1 // indirect
 	github.com/googleapis/gax-go/v2 v2.12.0 // indirect
@@ -88,14 +88,14 @@ require (
 	github.com/vearutop/statigz v1.4.0 // indirect
 	github.com/weathersource/go-errors v1.0.2 // indirect
 	go.opencensus.io v0.24.0 // indirect
-	go.opentelemetry.io/collector/config/configtelemetry v0.86.0 // indirect
-	go.opentelemetry.io/collector/confmap v0.86.0 // indirect
-	go.opentelemetry.io/collector/featuregate v1.0.0-rcv0015 // indirect
-	go.opentelemetry.io/collector/semconv v0.86.0 // indirect
+	go.opentelemetry.io/collector/config/configtelemetry v0.87.0 // indirect
+	go.opentelemetry.io/collector/confmap v0.87.0 // indirect
+	go.opentelemetry.io/collector/featuregate v1.0.0-rcv0016 // indirect
+	go.opentelemetry.io/collector/semconv v0.87.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.26.0 // indirect
 	golang.org/x/crypto v0.14.0 // indirect
-	golang.org/x/net v0.16.0 // indirect
+	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/oauth2 v0.13.0 // indirect
 	golang.org/x/sync v0.4.0 // indirect
 	golang.org/x/sys v0.13.0 // indirect
