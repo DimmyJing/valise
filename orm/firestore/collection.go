@@ -7,6 +7,19 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 )
 
+type (
+	dumperKeyType string
+	DumperType    = func(ctx ctx.Context, operation string, path string, data any, prevData any)
+)
+
+const DumperKey dumperKeyType = "firestoreDumper"
+
+func dumpData(cctx ctx.Context, operation string, path string, data any, prevData any) {
+	if dumper, ok := ctx.Value[DumperType](cctx, DumperKey); ok {
+		dumper(cctx, operation, path, data, prevData)
+	}
+}
+
 type collectionInterface interface {
 	setParent(ref *firestore.DocumentRef)
 	setPath(path string)
@@ -53,6 +66,8 @@ func (c *Collection[Doc, D]) Add(ctx ctx.Context, doc D) (*firestore.DocumentRef
 	}
 
 	ctx.SetAttributes(attr.String("docID", docRef.ID))
+
+	dumpData(ctx, "add", docRef.Path, transformedData, nil)
 
 	return docRef, writeResult, nil
 }

@@ -35,7 +35,7 @@ func TestBasicRoute(t *testing.T) {
 		rpc.Middleware(middleware.CORS()),
 		rpc.Middleware(rpc.InitMiddleware(nil, nil, nil)),
 		rpc.Middleware(rpc.LogMiddleware()),
-		rpc.Middleware(rpc.OTelMiddleware()),
+		rpc.Middleware(rpc.OTelMiddleware([]string{})),
 		rpc.Middleware(rpc.RecoverMiddleware()),
 	)
 	assert.NoError(t, err)

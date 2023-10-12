@@ -11,6 +11,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/DimmyJing/valise/ctx"
 	"github.com/DimmyJing/valise/jsonschema"
 	"github.com/labstack/echo/v4"
 	orderedmap "github.com/wk8/go-ordered-map/v2"
@@ -52,8 +53,10 @@ type openAPIResponse struct {
 }
 
 type OpenAPI struct {
-	document *openAPIObject
-	pathMap  *orderedmap.OrderedMap[string, openAPIOperation]
+	document        *openAPIObject
+	pathMap         *orderedmap.OrderedMap[string, openAPIOperation]
+	preHandlerHook  func(ctx.Context, any) ctx.Context
+	postHandlerHook func(ctx.Context, any, any)
 }
 
 func New(
@@ -78,8 +81,18 @@ func New(
 			},
 			Paths: orderedmap.New[string, map[string]openAPIOperation](),
 		},
-		pathMap: orderedmap.New[string, openAPIOperation](),
+		pathMap:         orderedmap.New[string, openAPIOperation](),
+		preHandlerHook:  nil,
+		postHandlerHook: nil,
 	}
+}
+
+func (o *OpenAPI) RegisterPreHandlerHook(hook func(ctx.Context, any) ctx.Context) {
+	o.preHandlerHook = hook
+}
+
+func (o *OpenAPI) RegisterPostHandlerHook(hook func(ctx.Context, any, any)) {
+	o.postHandlerHook = hook
 }
 
 type EchoInterface interface {
@@ -120,6 +133,15 @@ func (o *OpenAPI) DELETE(
 	options ...PathOption,
 ) (echo.HandlerFunc, error) {
 	return o.Add(ech, http.MethodDelete, path, handler, options...)
+}
+
+func (o *OpenAPI) PATCH(
+	ech EchoInterface,
+	path string,
+	handler any,
+	options ...PathOption,
+) (echo.HandlerFunc, error) {
+	return o.Add(ech, http.MethodPatch, path, handler, options...)
 }
 
 func (o *OpenAPI) Add(
@@ -233,7 +255,15 @@ func (o *OpenAPI) createHandler(
 		handlerName := runtime.FuncForPC(reflect.ValueOf(handler).Pointer()).Name()
 		handlerName = fmt.Sprintf("%s.%s.%s", path, method, handlerName)
 
-		handlerFn, err := createRPCHandler(handler, method, inputType, requestContentType, responseContentType)
+		handlerFn, err := createRPCHandler(
+			handler,
+			method,
+			inputType,
+			requestContentType,
+			responseContentType,
+			o.preHandlerHook,
+			o.postHandlerHook,
+		)
 		if err != nil {
 			return nil, "", fmt.Errorf("failed to create rpc handler: %w", err)
 		}

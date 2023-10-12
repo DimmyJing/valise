@@ -68,6 +68,11 @@ func (d *Doc[D]) Trans(cctx ctx.Context, transFn func(D) (D, error)) error {
 	)
 	defer end()
 
+	var (
+		initData    D
+		updatedData map[string]any
+	)
+
 	err := d.Client.RunTransaction(cctx, func(c context.Context, txn *firestore.Transaction) error {
 		ctx, end := ctx.From(c).Nested("firestore.update.transaction")
 		defer end()
@@ -76,6 +81,8 @@ func (d *Doc[D]) Trans(cctx ctx.Context, transFn func(D) (D, error)) error {
 		if err != nil {
 			return ctx.Fail(err)
 		}
+
+		initData = data
 
 		data, err = func() (D, error) {
 			ctx, end := ctx.Nested("firestore.update.transaction.transform")
@@ -94,8 +101,12 @@ func (d *Doc[D]) Trans(cctx ctx.Context, transFn func(D) (D, error)) error {
 			return ctx.Fail(err)
 		}
 
+		updatedData = transformedData
+
 		return ctx.FailIf(txn.Set(d.Ref, transformedData))
 	})
+
+	dumpData(cctx, "update", d.Ref.Path, updatedData, initData)
 
 	return cctx.FailIf(err)
 }
@@ -116,6 +127,8 @@ func (d *Doc[D]) Set(ctx ctx.Context, data D) (*firestore.WriteResult, error) {
 
 	res, err := d.Ref.Set(ctx, transformedData)
 
+	dumpData(ctx, "set", d.Ref.Path, transformedData, nil)
+
 	return res, ctx.FailIf(err)
 }
 
@@ -129,6 +142,8 @@ func (d *Doc[D]) Delete(ctx ctx.Context) (*firestore.WriteResult, error) {
 	defer end()
 
 	res, err := d.Ref.Delete(ctx)
+
+	dumpData(ctx, "delete", d.Ref.Path, nil, nil)
 
 	return res, ctx.FailIf(err)
 }

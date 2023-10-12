@@ -207,12 +207,14 @@ func parseInput( //nolint:funlen,gocognit,cyclop
 	return inputValue, nil
 }
 
-func createRPCHandler( //nolint:funlen
+func createRPCHandler( //nolint:funlen,cyclop
 	handler any,
 	method string,
 	inputType reflect.Type,
 	requestContentType string,
 	responseContentType string,
+	preHandlerHook func(ctx.Context, any) ctx.Context,
+	postHandlerHook func(ctx.Context, any, any),
 ) (echo.HandlerFunc, error) {
 	hasBody := slices.Contains(hasBodyMethods, method)
 
@@ -238,6 +240,10 @@ func createRPCHandler( //nolint:funlen
 			return ctx.Fail(NewInternalHTTPError(http.StatusBadRequest, err))
 		}
 
+		if preHandlerHook != nil {
+			ctx = preHandlerHook(ctx, inputValue.Interface())
+		}
+
 		out := handlerValue.Call([]reflect.Value{inputValue, reflect.ValueOf(ctx)})
 		if !out[1].IsNil() {
 			if err, ok := out[1].Interface().(error); ok {
@@ -251,6 +257,10 @@ func createRPCHandler( //nolint:funlen
 		}
 
 		output := out[0].Interface()
+
+		if postHandlerHook != nil {
+			postHandlerHook(ctx, inputValue.Interface(), output)
+		}
 
 		outRes, err := jsonschema.ValueToAny(reflect.ValueOf(output))
 		if err != nil {
