@@ -5,6 +5,7 @@ go 1.21.0
 require (
 	cloud.google.com/go/firestore v1.13.0
 	github.com/ClickHouse/clickhouse-go/v2 v2.14.2
+	github.com/SigNoz/signoz-otel-collector v0.79.8
 	github.com/charmbracelet/log v0.2.5
 	github.com/google/uuid v1.3.1
 	github.com/labstack/echo/v4 v4.11.2
@@ -58,6 +59,7 @@ require (
 	github.com/google/s2a-go v0.1.7 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.1 // indirect
 	github.com/googleapis/gax-go/v2 v2.12.0 // indirect
+	github.com/hashicorp/golang-lru v0.6.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/compress v1.17.0 // indirect
 	github.com/knadh/koanf/maps v0.1.1 // indirect
@@ -88,9 +90,13 @@ require (
 	github.com/vearutop/statigz v1.4.0 // indirect
 	github.com/weathersource/go-errors v1.0.2 // indirect
 	go.opencensus.io v0.24.0 // indirect
+	go.opentelemetry.io/collector/config/configgrpc v0.87.0 // indirect
+	go.opentelemetry.io/collector/config/confighttp v0.87.0 // indirect
 	go.opentelemetry.io/collector/config/configtelemetry v0.87.0 // indirect
 	go.opentelemetry.io/collector/confmap v0.87.0 // indirect
 	go.opentelemetry.io/collector/featuregate v1.0.0-rcv0016 // indirect
+	go.opentelemetry.io/collector/otelcol v0.87.0 // indirect
+	go.opentelemetry.io/collector/processor v0.87.0 // indirect
 	go.opentelemetry.io/collector/semconv v0.87.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.26.0 // indirect

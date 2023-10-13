@@ -195,11 +195,6 @@ func (s *signozExporter) convertMetrics( //nolint:funlen,gocognit,cyclop,gocyclo
 	}
 
 	err = func() error {
-		err := s.conn.Exec(ctx, `SET allow_experimental_object_type = 1`)
-		if err != nil {
-			return fmt.Errorf("failed execing allow_experimental_object_type: %w", err)
-		}
-
 		statement, err := s.conn.PrepareBatch(
 			ctx,
 			fmt.Sprintf(
@@ -244,11 +239,6 @@ func (s *signozExporter) convertMetrics( //nolint:funlen,gocognit,cyclop,gocyclo
 
 	err = func() error {
 		ctx := context.Background()
-
-		err := s.conn.Exec(ctx, `SET allow_experimental_object_type = 1`)
-		if err != nil {
-			return fmt.Errorf("failed execing allow_experimental_object_type: %w", err)
-		}
 
 		statement, err := s.conn.PrepareBatch(
 			ctx,
