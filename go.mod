@@ -17,7 +17,6 @@ require (
 	github.com/sanity-io/litter v1.5.5
 	github.com/segmentio/ksuid v1.0.4
 	github.com/stretchr/testify v1.8.4
-	github.com/swaggest/swgui v1.7.4
 	github.com/weathersource/go-gsrv v1.0.2
 	github.com/wk8/go-ordered-map/v2 v2.1.8
 	go.opentelemetry.io/collector/component v0.87.0
@@ -90,7 +89,6 @@ require (
 	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect
-	github.com/vearutop/statigz v1.4.0 // indirect
 	github.com/weathersource/go-errors v1.0.2 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/collector/config/configgrpc v0.87.0 // indirect
