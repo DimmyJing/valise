@@ -11,10 +11,9 @@
 
 # packages without 100% coverage
 
++ otel/exporters/signoz
 + otel/otellog
 + otel
 + env
 + ctx
-+ orm/firestore/mockfs
-+ orm/firestore
 + rpc
