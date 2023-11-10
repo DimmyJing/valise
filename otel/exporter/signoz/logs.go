@@ -33,8 +33,8 @@ func attributesToSlice(attributes pcommon.Map, forceStringValues bool) attribute
 				response.FloatKeys = append(response.FloatKeys, formatKey(key))
 				response.FloatValues = append(response.FloatValues, value.Double())
 			case pcommon.ValueTypeBool:
-				// add boolValues in future if it is required
 				response.BoolKeys = append(response.BoolKeys, formatKey(key))
+				response.BoolValues = append(response.BoolValues, value.Bool())
 			default: // store it as string
 				response.StringKeys = append(response.StringKeys, formatKey(key))
 				response.StringValues = append(response.StringValues, value.AsString())
@@ -55,6 +55,7 @@ type attributesToSliceResponse struct {
 	FloatKeys    []string
 	FloatValues  []float64
 	BoolKeys     []string
+	BoolValues   []bool
 }
 
 func addAttrsToTagStatement(
@@ -159,6 +160,8 @@ func (s *signozExporter) convertLogs(ctx context.Context, logs plog.Logs) error 
 					attributes.IntValues,
 					attributes.FloatKeys,
 					attributes.FloatValues,
+					attributes.BoolKeys,
+					attributes.BoolValues,
 				)
 				if err != nil {
 					return fmt.Errorf("failed to append statement to logs: %w", err)

@@ -21,6 +21,8 @@ CREATE TABLE IF NOT EXISTS signoz_logs.logs
     `attributes_int64_value` Array(Int64) CODEC(ZSTD(1)),
     `attributes_float64_key` Array(String) CODEC(ZSTD(1)),
     `attributes_float64_value` Array(Float64) CODEC(ZSTD(1)),
+    `attributes_bool_key` Array(String) CODEC(ZSTD(1)),
+    `attributes_bool_value` Array(Bool) CODEC(ZSTD(1)),
     INDEX body_idx body TYPE tokenbf_v1(10240, 3, 0) GRANULARITY 4,
     INDEX id_minmax id TYPE minmax GRANULARITY 1,
     INDEX severity_number_idx severity_number TYPE set(25) GRANULARITY 4,
@@ -80,6 +82,19 @@ CREATE MATERIALIZED VIEW IF NOT EXISTS signoz_logs.attribute_keys_string_final_m
 SELECT DISTINCT
     arrayJoin(attributes_string_key) AS name,
     'String' AS datatype
+FROM signoz_logs.logs
+ORDER BY name ASC;
+
+-- attribute_keys_bool_final_mv
+
+CREATE MATERIALIZED VIEW IF NOT EXISTS signoz_logs.attribute_keys_bool_final_mv TO signoz_logs.logs_attribute_keys
+(
+    `name` String,
+    `datatype` String
+) AS
+SELECT DISTINCT
+    arrayJoin(attributes_bool_key) AS name,
+    'Bool' AS datatype
 FROM signoz_logs.logs
 ORDER BY name ASC;
 
