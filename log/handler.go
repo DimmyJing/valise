@@ -6,8 +6,6 @@ import (
 	"io"
 	"log/slog"
 	"os"
-	"runtime"
-	"time"
 
 	"github.com/DimmyJing/valise/attr"
 	"github.com/charmbracelet/log"
@@ -64,8 +62,10 @@ func NewHandler(options ...Option) *Handler {
 	if handler.useCharm {
 		//nolint:exhaustruct
 		handler.charm = log.NewWithOptions(handler.writer, log.Options{
-			TimeFormat: "15:04:05.000",
-			Level:      log.DebugLevel,
+			ReportTimestamp: true,
+			ReportCaller:    true,
+			TimeFormat:      "15:04:05.000",
+			Level:           log.DebugLevel,
 		})
 	} else {
 		handler.jsonHandler = newJSONHandler(handler)
@@ -101,116 +101,14 @@ func (h *Handler) Enabled(ctx context.Context, level slog.Level) bool {
 	return level >= slog.Level(h.level.Level())
 }
 
-func levelToCharm(charm *log.Logger, level Level) func(any, ...any) {
-	//nolint:exhaustive
-	switch level {
-	case LevelTrace, LevelDebug:
-		return charm.Debug
-	case LevelInfo:
-		return charm.Info
-	case LevelWarn:
-		return charm.Warn
-	default:
-		return charm.Error
-	}
-}
-
-func getSource(pc uintptr) *slog.Source {
-	fs := runtime.CallersFrames([]uintptr{pc})
-	f, _ := fs.Next()
-
-	return &slog.Source{
-		Function: f.Function,
-		File:     f.File,
-		Line:     f.Line,
-	}
-}
-
-func (h *Handler) getCharmAttrs(record slog.Record) []any { //nolint:cyclop
-	attrs := []any{}
-
-	var prevAttr *attr.Attr
-
-	for idx := len(h.groups); idx >= 0; idx-- {
-		//nolint:nestif
-		if idx > 0 {
-			var newAttrs []attr.Attr
-			if len(h.attrs) > idx {
-				newAttrs = make([]attr.Attr, len(h.attrs[idx]))
-				copy(newAttrs, h.attrs[idx])
-			}
-
-			if idx < len(h.attrs)-1 {
-				if prevAttr != nil {
-					//nolint:makezero
-					newAttrs = append(newAttrs, *prevAttr)
-				}
-			} else {
-				record.Attrs(func(a slog.Attr) bool {
-					//nolint:makezero
-					newAttrs = append(newAttrs, a)
-
-					return true
-				})
-			}
-
-			if len(newAttrs) > 0 {
-				attrGroup := attr.Group(h.groups[idx-1], newAttrs...)
-				prevAttr = &attrGroup
-			}
-		} else {
-			if len(h.attrs) > 0 {
-				for _, a := range h.attrs[idx] {
-					attrs = append(attrs, a.Key, attr.ToAny(a.Value))
-				}
-			}
-			if prevAttr != nil {
-				attrs = append(attrs, prevAttr.Key, attr.ToAny(prevAttr.Value))
-			}
-		}
-	}
-
-	if len(h.groups) == 0 {
-		record.Attrs(func(a slog.Attr) bool {
-			attrs = append(attrs, a.Key, attr.ToAny(a.Value))
-
-			return true
-		})
-	}
-
-	return attrs
-}
-
-func (h *Handler) printCharm(record slog.Record) {
-	charm := h.charm.With()
-	if !record.Time.IsZero() {
-		charm.SetTimeFunction(func() time.Time {
-			return record.Time
-		})
-		charm.SetReportTimestamp(true)
-	} else {
-		charm.SetReportTimestamp(false)
-	}
-
-	if h.addSource {
-		source := getSource(record.PC)
-		sourceStr := log.ShortCallerFormatter(source.File, source.Line, source.Function)
-
-		charm.SetReportCaller(true)
-		charm.SetCallerFormatter(func(_ string, _ int, _ string) string {
-			return sourceStr
-		})
-	}
-
-	attrs := h.getCharmAttrs(record)
-
-	levelToCharm(charm, Level(record.Level))(record.Message, attrs...)
-}
-
 func (h *Handler) Handle(ctx context.Context, record slog.Record) error {
+	//nolint:nestif
 	if Level(record.Level) >= h.logLevel.Level() {
 		if h.useCharm {
-			h.printCharm(record)
+			err := h.charm.Handle(ctx, record)
+			if err != nil {
+				return fmt.Errorf("charm handler failed to handle log: %w", err)
+			}
 		} else {
 			err := h.jsonHandler.Handle(ctx, record)
 			if err != nil {
