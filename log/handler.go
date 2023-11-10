@@ -130,18 +130,8 @@ func (h *Handler) Handle(ctx context.Context, record slog.Record) error {
 func (h *Handler) WithAttrs(attrs []slog.Attr) slog.Handler { //nolint:ireturn
 	newHandler := *h
 	if h.useCharm {
-		newHandler.attrs = make([][]attr.Attr, len(h.attrs))
-		for i, a := range h.attrs {
-			newHandler.attrs[i] = make([]attr.Attr, len(a))
-			copy(newHandler.attrs[i], a)
-		}
-
-		if len(h.attrs) <= len(h.groups) {
-			newHandler.attrs = append(newHandler.attrs, nil)
-		}
-
-		attrsIdx := len(newHandler.attrs) - 1
-		newHandler.attrs[attrsIdx] = append(newHandler.attrs[attrsIdx], attrs...)
+		//nolint:forcetypeassert
+		newHandler.charm = newHandler.charm.WithAttrs(attrs).(*log.Logger)
 	} else {
 		//nolint:forcetypeassert
 		newHandler.jsonHandler = newHandler.jsonHandler.WithAttrs(attrs).(*slog.JSONHandler)
@@ -153,9 +143,8 @@ func (h *Handler) WithAttrs(attrs []slog.Attr) slog.Handler { //nolint:ireturn
 func (h *Handler) WithGroup(name string) slog.Handler { //nolint:ireturn
 	newHandler := *h
 	if h.useCharm {
-		newHandler.groups = make([]string, len(h.groups)+1)
-		copy(newHandler.groups, h.groups)
-		newHandler.groups[len(h.groups)] = name
+		//nolint:forcetypeassert
+		newHandler.charm = newHandler.charm.WithGroup(name).(*log.Logger)
 	} else {
 		//nolint:forcetypeassert
 		newHandler.jsonHandler = newHandler.jsonHandler.WithGroup(name).(*slog.JSONHandler)
