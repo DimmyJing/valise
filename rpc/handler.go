@@ -245,9 +245,16 @@ func createRPCHandler( //nolint:funlen,cyclop
 		}
 
 		out := handlerValue.Call([]reflect.Value{inputValue, reflect.ValueOf(ctx)})
+		//nolint:nestif
 		if !out[1].IsNil() {
 			if err, ok := out[1].Interface().(error); ok {
-				return ctx.Fail(NewInternalHTTPError(http.StatusInternalServerError, err))
+				var httpError *echo.HTTPError
+
+				if errors.As(err, &httpError) {
+					return err
+				} else {
+					return ctx.Fail(NewInternalHTTPError(http.StatusInternalServerError, err))
+				}
 			} else {
 				//nolint:goerr113
 				return ctx.Fail(NewInternalHTTPError(http.StatusInternalServerError,
