@@ -207,7 +207,7 @@ func parseInput( //nolint:funlen,gocognit,cyclop
 	return inputValue, nil
 }
 
-func createRPCHandler( //nolint:funlen,cyclop
+func createRPCHandler( //nolint:funlen,cyclop,gocognit
 	handler any,
 	method string,
 	inputType reflect.Type,
@@ -228,10 +228,15 @@ func createRPCHandler( //nolint:funlen,cyclop
 	return echo.HandlerFunc(func(echoCtx echo.Context) error {
 		ctx := FromEchoContext(echoCtx).ctx
 
+		actualRequeestContentType := echoCtx.Request().Header.Get("Content-Type")
+		if actualRequeestContentType == "" {
+			actualRequeestContentType = requestContentType
+		}
+
 		inputValue, err := parseInput(
 			inputFieldAttrsMap,
 			hasBody,
-			requestContentType,
+			actualRequeestContentType,
 			echoCtx,
 			ctx,
 			inputType,

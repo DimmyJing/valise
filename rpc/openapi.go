@@ -154,7 +154,7 @@ func (o *OpenAPI) Add(
 	description := ""
 	middlewares := []echo.MiddlewareFunc{}
 	tags := []string{}
-	requestContentType := echo.MIMEApplicationJSON
+	requestContentType := echo.MIMEApplicationForm
 	responseContentType := echo.MIMEApplicationJSON
 
 	for _, option := range options {
