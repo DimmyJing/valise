@@ -14,7 +14,7 @@ import (
 	orderedmap "github.com/wk8/go-ordered-map/v2"
 )
 
-func createStub( //nolint:funlen
+func createStub( //nolint:funlen,cyclop
 	path string,
 	method string,
 	description string,

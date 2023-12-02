@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime"
 	"net/http"
 	"reflect"
 	"slices"
@@ -228,15 +229,14 @@ func createRPCHandler( //nolint:funlen,cyclop,gocognit
 	return echo.HandlerFunc(func(echoCtx echo.Context) error {
 		ctx := FromEchoContext(echoCtx).ctx
 
-		actualRequeestContentType := echoCtx.Request().Header.Get("Content-Type")
-		if actualRequeestContentType == "" {
-			actualRequeestContentType = requestContentType
+		if t, _, err := mime.ParseMediaType(echoCtx.Request().Header.Get("Content-Type")); err == nil {
+			requestContentType = t
 		}
 
 		inputValue, err := parseInput(
 			inputFieldAttrsMap,
 			hasBody,
-			actualRequeestContentType,
+			requestContentType,
 			echoCtx,
 			ctx,
 			inputType,
