@@ -83,7 +83,7 @@ func HTTPErrorHandler(err error, echoCtx echo.Context) {
 			_ = echoCtx.JSON(httpError.Code, ErrorMessage{Code: "", Message: ""})
 		}
 	} else {
-		_ = echoCtx.JSON(httpError.Code, ErrorMessage{Code: "", Message: ""})
+		_ = echoCtx.JSON(http.StatusInternalServerError, ErrorMessage{Code: "", Message: ""})
 	}
 }
 
