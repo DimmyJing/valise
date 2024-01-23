@@ -234,6 +234,8 @@ func (o *OpenAPI) CodeGen(path string) error { //nolint:cyclop
 	for key, val := range files {
 		var builder strings.Builder
 
+		builder.WriteString("import type { DateString } from \"./common\"\n\n")
+
 		for _, defs := range val {
 			builder.WriteString(defs)
 			builder.WriteString("\n\n")
@@ -246,6 +248,17 @@ func (o *OpenAPI) CodeGen(path string) error { //nolint:cyclop
 		if err != nil {
 			return fmt.Errorf("failed to write file: %w", err)
 		}
+	}
+
+	var builder strings.Builder
+
+	builder.WriteString("export type DateString = string;\n")
+	fileContent := []byte(strings.TrimSpace(builder.String()))
+
+	//nolint:gosec,gomnd
+	err := os.WriteFile(filepath.Join(path, "common.ts"), fileContent, 0o644)
+	if err != nil {
+		return fmt.Errorf("failed to write file: %w", err)
 	}
 
 	return nil

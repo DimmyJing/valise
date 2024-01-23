@@ -73,7 +73,7 @@ func jsonSchemaToTS(input JSONSchema) (string, error) { //nolint:funlen,cyclop,g
 
 		switch input.Format {
 		case "date-time":
-			return "Date", nil
+			return "DateString", nil
 		case "binary":
 			return "Blob", nil
 		default:
