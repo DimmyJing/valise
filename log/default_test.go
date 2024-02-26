@@ -9,6 +9,7 @@ import (
 	"github.com/DimmyJing/valise/attr"
 	"github.com/DimmyJing/valise/log"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func initDefault(options ...log.Option) *bytes.Buffer {
@@ -122,7 +123,7 @@ func TestDefaultPanic(t *testing.T) { //nolint:paralleltest
 		defer func() {
 			if r := recover(); r != nil {
 				if err, ok := r.(error); ok {
-					assert.ErrorIs(t, err, errPanic)
+					require.ErrorIs(t, err, errPanic)
 				} else {
 					t.Fail()
 				}

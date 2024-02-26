@@ -18,9 +18,8 @@ type Handler struct {
 	logLevel    Leveler
 	addSource   bool
 	replaceAttr func(groups []string, a attr.Attr) attr.Attr
-	jsonHandler *slog.JSONHandler
 	handler     func(ctx context.Context, record slog.Record) error
-	charm       *log.Logger
+	slogHandler slog.Handler
 	attrs       [][]attr.Attr
 	groups      []string
 }
@@ -33,9 +32,8 @@ func NewHandler(options ...Option) *Handler {
 		logLevel:    LevelInfo,
 		addSource:   true,
 		replaceAttr: nil,
-		jsonHandler: nil,
 		handler:     nil,
-		charm:       nil,
+		slogHandler: nil,
 		attrs:       nil,
 		groups:      nil,
 	}
@@ -61,14 +59,14 @@ func NewHandler(options ...Option) *Handler {
 
 	if handler.useCharm {
 		//nolint:exhaustruct
-		handler.charm = log.NewWithOptions(handler.writer, log.Options{
+		handler.slogHandler = log.NewWithOptions(handler.writer, log.Options{
 			ReportTimestamp: true,
 			ReportCaller:    true,
 			TimeFormat:      "15:04:05.000",
 			Level:           log.DebugLevel,
 		})
 	} else {
-		handler.jsonHandler = newJSONHandler(handler)
+		handler.slogHandler = newJSONHandler(handler)
 	}
 
 	return handler
@@ -102,18 +100,10 @@ func (h *Handler) Enabled(ctx context.Context, level slog.Level) bool {
 }
 
 func (h *Handler) Handle(ctx context.Context, record slog.Record) error {
-	//nolint:nestif
 	if Level(record.Level) >= h.logLevel.Level() {
-		if h.useCharm {
-			err := h.charm.Handle(ctx, record)
-			if err != nil {
-				return fmt.Errorf("charm handler failed to handle log: %w", err)
-			}
-		} else {
-			err := h.jsonHandler.Handle(ctx, record)
-			if err != nil {
-				return fmt.Errorf("json handler failed to handle log: %w", err)
-			}
+		err := h.slogHandler.Handle(ctx, record)
+		if err != nil {
+			return fmt.Errorf("handler failed to handle log: %w", err)
 		}
 	}
 
@@ -128,27 +118,15 @@ func (h *Handler) Handle(ctx context.Context, record slog.Record) error {
 }
 
 func (h *Handler) WithAttrs(attrs []slog.Attr) slog.Handler {
-	newHandler := *h
-	if h.useCharm {
-		//nolint:forcetypeassert
-		newHandler.charm = newHandler.charm.WithAttrs(attrs).(*log.Logger)
-	} else {
-		//nolint:forcetypeassert
-		newHandler.jsonHandler = newHandler.jsonHandler.WithAttrs(attrs).(*slog.JSONHandler)
-	}
+	r := *h
+	r.slogHandler = r.slogHandler.WithAttrs(attrs)
 
-	return &newHandler
+	return &r
 }
 
 func (h *Handler) WithGroup(name string) slog.Handler {
-	newHandler := *h
-	if h.useCharm {
-		//nolint:forcetypeassert
-		newHandler.charm = newHandler.charm.WithGroup(name).(*log.Logger)
-	} else {
-		//nolint:forcetypeassert
-		newHandler.jsonHandler = newHandler.jsonHandler.WithGroup(name).(*slog.JSONHandler)
-	}
+	r := *h
+	r.slogHandler = r.slogHandler.WithGroup(name)
 
-	return &newHandler
+	return &r
 }
