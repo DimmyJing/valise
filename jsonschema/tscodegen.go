@@ -1,6 +1,7 @@
 package jsonschema
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -15,7 +16,7 @@ func JSONSchemaToTS(inp *JSONSchema, prefix string) (string, error) {
 	return FormatComment(inp.Description) + prefix + types, nil
 }
 
-var errInvalidSchema = fmt.Errorf("invalid schema")
+var errInvalidSchema = errors.New("invalid schema")
 
 func FormatComment(comment string) string {
 	if comment == "" {
@@ -133,7 +134,7 @@ func jsonSchemaToTS(input JSONSchema) (string, error) { //nolint:funlen,cyclop,g
 				return "", fmt.Errorf("failed to convert object properties: %w", err)
 			}
 
-			return fmt.Sprintf("Record<string, " + res + ">"), nil
+			return "Record<string, " + res + ">", nil
 		}
 	}
 

@@ -11,6 +11,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type testInput1 struct {
@@ -38,14 +39,14 @@ func TestBasicRoute(t *testing.T) {
 		rpc.Middleware(rpc.OTelMiddleware([]string{})),
 		rpc.Middleware(rpc.RecoverMiddleware()),
 	)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	req := httptest.NewRequest(http.MethodGet, "/test?name=jimmy", nil).WithContext(context.Background())
 	rec := httptest.NewRecorder()
 	echoCtx := ech.NewContext(req, rec)
 
 	err = handler(echoCtx)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, http.StatusOK, rec.Code)
 	assert.Equal(t, "{\"name\":\"jimmy\"}\n", rec.Body.String())

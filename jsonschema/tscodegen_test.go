@@ -77,7 +77,7 @@ func TestSchemaConvert(t *testing.T) { //nolint:funlen
 	expected := `test{
   test1: unknown;
   test2?: "a" | "b";
-  test3?: Date;
+  test3?: DateString;
   test4?: string;
   test5?: number;
   test6?: boolean;

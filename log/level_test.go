@@ -5,6 +5,7 @@ import (
 
 	"github.com/DimmyJing/valise/log"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestLevelLevel(t *testing.T) {
@@ -12,7 +13,7 @@ func TestLevelLevel(t *testing.T) {
 
 	var _ log.Leveler = log.LevelInfo
 
-	assert.Equal(t, log.LevelError.Level(), log.LevelError)
+	assert.Equal(t, log.LevelError, log.LevelError.Level())
 }
 
 func TestLevelMarshalJSON(t *testing.T) {
@@ -20,7 +21,7 @@ func TestLevelMarshalJSON(t *testing.T) {
 
 	val, err := log.LevelError.MarshalJSON()
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, []byte(`"ERROR"`), val)
 }
 
@@ -29,7 +30,7 @@ func TestLevelMarshalText(t *testing.T) {
 
 	val, err := log.LevelError.MarshalText()
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, []byte(`ERROR`), val)
 }
 
@@ -54,7 +55,7 @@ func TestLevelUnmarshalJSON(t *testing.T) {
 
 	err := level.UnmarshalJSON([]byte(`"ERROR"`))
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, log.LevelError, level)
 
 	err = level.UnmarshalJSON([]byte("ERROR"))
@@ -69,21 +70,21 @@ func TestLevelUnmarshalText(t *testing.T) {
 
 	err := level.UnmarshalText([]byte("ERROR"))
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, log.LevelError, level)
 
 	err = level.UnmarshalText([]byte("UNKNOWN-100"))
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, log.Level(100), level)
 
 	err = level.UnmarshalText([]byte("UNKNOWN-a"))
 
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	err = level.UnmarshalText([]byte("INVALID"))
 
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	testcases := []struct {
 		in  string
@@ -101,7 +102,7 @@ func TestLevelUnmarshalText(t *testing.T) {
 	for _, testcase := range testcases {
 		err = level.UnmarshalText([]byte(testcase.in))
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, testcase.out, level)
 	}
 }
@@ -122,17 +123,17 @@ func TestLevelVar(t *testing.T) {
 
 	text, err := level.MarshalText()
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, []byte("ERROR"), text)
 	assert.Equal(t, "LevelVar(ERROR)", level.String())
 
 	err = level.UnmarshalText([]byte("WARN"))
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, log.LevelWarn, level.Level())
 
 	err = level.UnmarshalText([]byte("INVALID"))
 
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Equal(t, log.LevelWarn, level.Level())
 }

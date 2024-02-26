@@ -27,7 +27,7 @@ type EnumMember interface {
 //nolint:gochecknoglobals
 var enumInterface = reflect.TypeOf((*EnumMember)(nil)).Elem()
 
-var errReflectType = fmt.Errorf("invalid reflect.Type")
+var errReflectType = errors.New("invalid reflect.Type")
 
 func convertType(value reflect.Type) (*JSONSchema, error) { //nolint:funlen,gocognit,gocyclo,cyclop
 	var schema JSONSchema

@@ -12,6 +12,7 @@ import (
 	"github.com/DimmyJing/valise/jsonschema"
 	"github.com/DimmyJing/valise/log"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type TestEnum string
@@ -136,20 +137,20 @@ func TestParamReflect(t *testing.T) {
 
 	//nolint:exhaustruct
 	schema, err := jsonschema.ParametersToSchema(reflect.TypeOf(TestSchema2{}), true)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, "hello", schema[0].Name)
 	assert.Equal(t, "query", schema[0].In)
-	assert.Equal(t, true, schema[0].Required)
+	assert.True(t, schema[0].Required)
 	assert.Equal(t, "string", schema[0].Schema.Type)
 
 	assert.Equal(t, "hello5", schema[1].Name)
 	assert.Equal(t, "path", schema[1].In)
-	assert.Equal(t, true, schema[1].Required)
+	assert.True(t, schema[1].Required)
 	assert.Equal(t, "string", schema[1].Schema.Type)
 
 	assert.Equal(t, "hello4", schema[2].Name)
 	assert.Equal(t, "query", schema[2].In)
-	assert.Equal(t, false, schema[2].Required)
+	assert.False(t, schema[2].Required)
 	assert.Equal(t, "string", schema[2].Schema.Type)
 
 	//nolint:exhaustruct

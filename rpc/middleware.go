@@ -11,8 +11,8 @@ import (
 	"github.com/DimmyJing/valise/attr"
 	"github.com/DimmyJing/valise/ctx"
 	"github.com/DimmyJing/valise/log"
-	"github.com/DimmyJing/valise/otel/otellog"
 	"github.com/labstack/echo/v4"
+	otellog "go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/metric"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
@@ -215,8 +215,8 @@ func UserID(cctx ctx.Context) string {
 }
 
 var (
-	errNoAuthHeader = fmt.Errorf("no authorization header")
-	errInvalidToken = fmt.Errorf("invalid bearer token")
+	errNoAuthHeader = errors.New("no authorization header")
+	errInvalidToken = errors.New("invalid bearer token")
 )
 
 type TokenVerifier func(ctx.Context, string) (string, error)
@@ -250,6 +250,7 @@ func AuthMiddleware(tokenVerifier TokenVerifier, development bool) echo.Middlewa
 			intEchoCtx := FromEchoContext(echoCtx)
 			cctx := intEchoCtx.ctx
 			request := echoCtx.Request()
+
 			auth := request.Header.Get("Authorization")
 			if auth == "" {
 				return cctx.Fail(echo.NewHTTPError(http.StatusUnauthorized, errNoAuthHeader))
@@ -275,6 +276,7 @@ func MaybeAuthMiddleware(tokenVerifier TokenVerifier, development bool) echo.Mid
 			intEchoCtx := FromEchoContext(echoCtx)
 			cctx := intEchoCtx.ctx
 			request := echoCtx.Request()
+
 			auth := request.Header.Get("Authorization")
 			if auth == "" {
 				return next(intEchoCtx)

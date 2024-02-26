@@ -32,7 +32,7 @@ func (l *Logger) Enabled(ctx context.Context, level Level) bool {
 	return l.logger.Enabled(ctx, slog.Level(level))
 }
 
-func (l *Logger) Handler() slog.Handler { //nolint:ireturn
+func (l *Logger) Handler() slog.Handler {
 	return l.logger.Handler()
 }
 

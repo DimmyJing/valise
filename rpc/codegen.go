@@ -35,6 +35,7 @@ func createStub( //nolint:funlen,cyclop
 	result := ""
 
 	if requestBody != nil {
+		//nolint:goconst
 		inputBodyType, err := jsonschema.JSONSchemaToTS(requestBody, "export type "+pathName+"RequestBody = ")
 		if err != nil {
 			return "", fmt.Errorf("failed to convert json schema to ts: %w", err)
@@ -188,7 +189,7 @@ func processPath(operation openAPIOperation, method string, pathString string) (
 	return defs, nil
 }
 
-func (o *OpenAPI) CodeGen(path string) error { //nolint:cyclop
+func (o *OpenAPI) CodeGen(path string) error { //nolint:cyclop,funlen
 	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
 		//nolint:gomnd
 		err := os.Mkdir(path, 0o755)

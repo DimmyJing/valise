@@ -45,7 +45,7 @@ func TestFloat64(t *testing.T) {
 
 	a := attr.Float64("foo", 42.0)
 	assert.Equal(t, "foo", a.Key)
-	assert.Equal(t, 42.0, a.Value.Float64())
+	assert.InEpsilon(t, 42.0, a.Value.Float64(), 0.0001)
 }
 
 func TestBool(t *testing.T) {
@@ -53,7 +53,7 @@ func TestBool(t *testing.T) {
 
 	a := attr.Bool("foo", true)
 	assert.Equal(t, "foo", a.Key)
-	assert.Equal(t, true, a.Value.Bool())
+	assert.True(t, a.Value.Bool())
 }
 
 func TestTime(t *testing.T) {

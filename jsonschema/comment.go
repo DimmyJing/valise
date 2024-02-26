@@ -40,7 +40,7 @@ func getNodeDescription(doc *ast.CommentGroup, comment *ast.CommentGroup) string
 }
 
 // This can only retrieve comments up to one level deep.
-func InitCommentMap(rootdir string, basePkg string) { //nolint:gocognit,cyclop
+func InitCommentMap(rootdir string, basePkg string) { //nolint:gocognit,cyclop,funlen
 	fset := token.NewFileSet()
 	dict := make(map[string][]*ast.Package)
 
@@ -48,9 +48,11 @@ func InitCommentMap(rootdir string, basePkg string) { //nolint:gocognit,cyclop
 		if !info.IsDir() || strings.Contains(newPath, ".git") {
 			return nil
 		}
+
 		d, _ := parser.ParseDir(fset, newPath, nil, parser.ParseComments)
 		relPath, _ := filepath.Rel(rootdir, newPath)
 		pkgName := filepath.Join(basePkg, relPath)
+
 		for _, v := range d {
 			dict[pkgName] = append(dict[pkgName], v)
 		}
@@ -71,11 +73,14 @@ func InitCommentMap(rootdir string, basePkg string) { //nolint:gocognit,cyclop
 					if node.Name.IsExported() {
 						typ = node.Name.String()
 						txt := getNodeDescription(node.Doc, node.Comment)
+
 						if txt == "" && gtxt != "" {
 							txt = gtxt
 							gtxt = ""
 						}
+
 						txt = docPackage.Synopsis(txt)
+
 						if strings.TrimSpace(txt) != "" {
 							commentMap[fmt.Sprintf("%s.%s", pkg, typ)] = strings.TrimSpace(txt)
 						}

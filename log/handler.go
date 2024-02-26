@@ -127,7 +127,7 @@ func (h *Handler) Handle(ctx context.Context, record slog.Record) error {
 	return nil
 }
 
-func (h *Handler) WithAttrs(attrs []slog.Attr) slog.Handler { //nolint:ireturn
+func (h *Handler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	newHandler := *h
 	if h.useCharm {
 		//nolint:forcetypeassert
@@ -140,7 +140,7 @@ func (h *Handler) WithAttrs(attrs []slog.Attr) slog.Handler { //nolint:ireturn
 	return &newHandler
 }
 
-func (h *Handler) WithGroup(name string) slog.Handler { //nolint:ireturn
+func (h *Handler) WithGroup(name string) slog.Handler {
 	newHandler := *h
 	if h.useCharm {
 		//nolint:forcetypeassert

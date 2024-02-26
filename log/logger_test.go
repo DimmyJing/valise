@@ -12,6 +12,7 @@ import (
 	"github.com/DimmyJing/valise/log"
 	"github.com/sanity-io/litter"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func getLogger(options ...log.Option) (*log.Logger, *bytes.Buffer) {
@@ -176,7 +177,7 @@ func TestPanic(t *testing.T) {
 		defer func() {
 			if r := recover(); r != nil {
 				if err, ok := r.(error); ok {
-					assert.ErrorIs(t, err, errPanic)
+					require.ErrorIs(t, err, errPanic)
 				} else {
 					t.Fail()
 				}

@@ -10,11 +10,11 @@ import (
 func TestNanoID(t *testing.T) {
 	t.Parallel()
 
-	assert.Equal(t, 21, len(utils.NanoID()))
+	assert.Len(t, utils.NanoID(), 21)
 }
 
 func TestNanoIDAlpha(t *testing.T) {
 	t.Parallel()
 
-	assert.Equal(t, 21, len(utils.NanoIDAlpha()))
+	assert.Len(t, utils.NanoIDAlpha(), 21)
 }
