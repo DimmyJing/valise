@@ -12,8 +12,10 @@ import (
 	"github.com/DimmyJing/valise/ctx"
 	"github.com/DimmyJing/valise/log"
 	"github.com/labstack/echo/v4"
+	"go.opentelemetry.io/otel"
 	otellog "go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/propagation"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -110,6 +112,9 @@ func OTelMiddleware(skipPaths []string) echo.MiddlewareFunc {
 			if slices.Contains(skipPaths, echoCtx.Path()) || cctx.OTelTracer() == nil {
 				return next(intEchoCtx)
 			}
+
+			carrier := propagation.HeaderCarrier(echoCtx.Request().Header)
+			cctx = ctx.From(otel.GetTextMapPropagator().Extract(cctx, carrier))
 
 			spanCtx, rootSpan := cctx.OTelTracer().Start(
 				cctx,
