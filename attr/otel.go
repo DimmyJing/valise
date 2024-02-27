@@ -235,7 +235,12 @@ func AnyToOtelValue(val any) attribute.Value { //nolint:funlen,gocognit,gocyclo,
 	case fmt.Stringer:
 		return attribute.StringValue(val.String())
 	default:
-		valKind := reflect.TypeOf(val).Kind()
+		typeOfVal := reflect.TypeOf(val)
+		if typeOfVal == nil {
+			return attribute.StringValue(marshalJSON(val))
+		}
+
+		valKind := typeOfVal.Kind()
 		if valKind == reflect.Slice || valKind == reflect.Array {
 			reflectVal := reflect.ValueOf(val)
 			result := make([]string, reflectVal.Len())
