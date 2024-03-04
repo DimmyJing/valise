@@ -235,14 +235,19 @@ func (o *OpenAPI) CodeGen(path string) error { //nolint:cyclop,funlen
 	for key, val := range files {
 		var builder strings.Builder
 
-		builder.WriteString("import type { DateString } from \"./common\"\n\n")
+		const dateString = "import type { DateString } from \"./common\"\n\n"
 
 		for _, defs := range val {
 			builder.WriteString(defs)
 			builder.WriteString("\n\n")
 		}
 
-		fileContent := []byte(strings.TrimSpace(builder.String()))
+		builderString := builder.String()
+		if strings.Contains(builderString, "DateString") {
+			builderString = dateString + builderString
+		}
+
+		fileContent := []byte(strings.TrimSpace(builderString))
 
 		//nolint:gosec,gomnd
 		err := os.WriteFile(filepath.Join(path, key+".ts"), fileContent, 0o644)
