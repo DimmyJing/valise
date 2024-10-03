@@ -113,16 +113,20 @@ func AnyToOtelValue(val any) attribute.Value { //nolint:funlen,gocognit,gocyclo,
 	case int:
 		return attribute.Int64Value(int64(val))
 	case uint8:
+		//nolint:gosec
 		return attribute.Int64Value(int64(val))
 	case uint16:
 		return attribute.Int64Value(int64(val))
 	case uint32:
 		return attribute.Int64Value(int64(val))
 	case uint64:
+		//nolint:gosec
 		return attribute.Int64Value(int64(val))
 	case uint:
+		//nolint:gosec
 		return attribute.Int64Value(int64(val))
 	case uintptr:
+		//nolint:gosec
 		return attribute.Int64Value(int64(val))
 	case float32:
 		return attribute.Float64Value(float64(val))
@@ -245,7 +249,7 @@ func AnyToOtelValue(val any) attribute.Value { //nolint:funlen,gocognit,gocyclo,
 			reflectVal := reflect.ValueOf(val)
 			result := make([]string, reflectVal.Len())
 
-			for i := 0; i < reflectVal.Len(); i++ {
+			for i := range reflectVal.Len() {
 				result[i] = marshalJSON(reflectVal.Index(i).Interface())
 			}
 

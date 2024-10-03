@@ -120,6 +120,7 @@ func (l *LevelVar) MarshalText() ([]byte, error) {
 }
 
 func (l *LevelVar) Set(level Level) {
+	//nolint:gosec
 	l.level.Store(int32(level))
 }
 

@@ -52,11 +52,9 @@ func ServeSwaggerUI(ech *echo.Echo, title string, spec []byte, userID string) {
 </html>`
 
 	ech.GET("/", func(c echo.Context) error {
-		//nolint:wrapcheck
 		return c.HTML(http.StatusOK, swaggerHTML)
 	})
 	ech.GET("/swagger.json", func(c echo.Context) error {
-		//nolint:wrapcheck
 		return c.JSONBlob(http.StatusOK, spec)
 	})
 }

@@ -125,6 +125,7 @@ func jsonSchemaToTS(input JSONSchema) (string, error) { //nolint:funlen,cyclop,g
 				insideBuilder.WriteString(FormatComment(value.Description))
 				insideBuilder.WriteString(fmt.Sprintf("%s%s: %s;\n", key, optional, res))
 			}
+
 			insideBuilder.WriteString("}")
 
 			return indentMiddle(insideBuilder.String()), nil

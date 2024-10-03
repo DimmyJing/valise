@@ -78,14 +78,12 @@ func (c Context) Nested(name string, attrs ...attr.Attr) (Context, func()) {
 			res[i] = attr.OtelAttr(a)
 		}
 
-		//nolint:spancheck
 		ctx, span := tracer.Start(
 			c,
 			name,
 			trace.WithAttributes(res...),
 		)
 
-		//nolint:spancheck
 		return From(ctx), func() { span.End() }
 	}
 
@@ -99,7 +97,6 @@ func (c Context) NestedClient(name string, attrs ...attr.Attr) (Context, func())
 			res[i] = attr.OtelAttr(a)
 		}
 
-		//nolint:spancheck
 		ctx, span := tracer.Start(
 			c,
 			name,
@@ -107,7 +104,6 @@ func (c Context) NestedClient(name string, attrs ...attr.Attr) (Context, func())
 			trace.WithSpanKind(trace.SpanKindClient),
 		)
 
-		//nolint:spancheck
 		return From(ctx), func() { span.End() }
 	}
 

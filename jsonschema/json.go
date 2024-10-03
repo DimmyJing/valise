@@ -23,7 +23,7 @@ func ValueToAny(value reflect.Value) (any, error) { //nolint:cyclop,funlen,gocog
 	case reflect.Array:
 		result := make([]any, value.Len())
 
-		for idx := 0; idx < value.Len(); idx++ {
+		for idx := range value.Len() {
 			arrayVal, err := ValueToAny(value.Index(idx))
 			if err != nil {
 				return nil, fmt.Errorf("failed to convert array value at idx %d: %w", idx, err)
@@ -80,7 +80,7 @@ func ValueToAny(value reflect.Value) (any, error) { //nolint:cyclop,funlen,gocog
 
 		result := make([]any, value.Len())
 
-		for idx := 0; idx < value.Len(); idx++ {
+		for idx := range value.Len() {
 			sliceVal, err := ValueToAny(value.Index(idx))
 			if err != nil {
 				return nil, fmt.Errorf("failed to convert slice value at idx %d: %w", idx, err)
@@ -99,7 +99,7 @@ func ValueToAny(value reflect.Value) (any, error) { //nolint:cyclop,funlen,gocog
 
 		result := make(map[string]any)
 
-		for idx := 0; idx < value.NumField(); idx++ {
+		for idx := range value.NumField() {
 			field := value.Type().Field(idx)
 			if !field.IsExported() {
 				continue
@@ -380,7 +380,7 @@ func AnyToValue(anyVal any, value reflect.Value) error { //nolint:funlen,gocogni
 		} else if mapVal, isMapVal := anyVal.(map[string]any); isMapVal {
 			processedKeys := make(map[string]struct{})
 
-			for idx := 0; idx < value.NumField(); idx++ {
+			for idx := range value.NumField() {
 				field := value.Type().Field(idx)
 				if !field.IsExported() {
 					continue

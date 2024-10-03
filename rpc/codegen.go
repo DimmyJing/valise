@@ -35,7 +35,6 @@ func createStub( //nolint:funlen,cyclop
 	result := ""
 
 	if requestBody != nil {
-		//nolint:goconst
 		inputBodyType, err := jsonschema.JSONSchemaToTS(requestBody, "export type "+pathName+"RequestBody = ")
 		if err != nil {
 			return "", fmt.Errorf("failed to convert json schema to ts: %w", err)
@@ -191,7 +190,7 @@ func processPath(operation openAPIOperation, method string, pathString string) (
 
 func (o *OpenAPI) CodeGen(path string) error { //nolint:cyclop,funlen
 	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
-		//nolint:gomnd
+		//nolint:mnd
 		err := os.Mkdir(path, 0o755)
 		if err != nil {
 			return fmt.Errorf("error creating directory: %w", err)
@@ -199,7 +198,7 @@ func (o *OpenAPI) CodeGen(path string) error { //nolint:cyclop,funlen
 	}
 
 	if val, err := o.Document(); err == nil {
-		//nolint:gosec,gomnd
+		//nolint:gosec,mnd
 		err := os.WriteFile(filepath.Join(path, "swagger.json"), val, 0o644)
 		if err != nil {
 			return fmt.Errorf("failed to write file: %w", err)
@@ -249,7 +248,7 @@ func (o *OpenAPI) CodeGen(path string) error { //nolint:cyclop,funlen
 
 		fileContent := []byte(strings.TrimSpace(builderString))
 
-		//nolint:gosec,gomnd
+		//nolint:gosec,mnd
 		err := os.WriteFile(filepath.Join(path, key+".ts"), fileContent, 0o644)
 		if err != nil {
 			return fmt.Errorf("failed to write file: %w", err)
@@ -261,7 +260,7 @@ func (o *OpenAPI) CodeGen(path string) error { //nolint:cyclop,funlen
 	builder.WriteString("export type DateString = string;\n")
 	fileContent := []byte(strings.TrimSpace(builder.String()))
 
-	//nolint:gosec,gomnd
+	//nolint:gosec,mnd
 	err := os.WriteFile(filepath.Join(path, "common.ts"), fileContent, 0o644)
 	if err != nil {
 		return fmt.Errorf("failed to write file: %w", err)

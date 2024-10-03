@@ -90,16 +90,16 @@ func TestSchemaError(t *testing.T) {
 	type invalidArray [1]complex64
 
 	_, err := jsonschema.AnyToSchema(reflect.TypeOf(invalidArray{}))
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	_, err = jsonschema.AnyToSchema(reflect.TypeOf((*fmt.Stringer)(nil)))
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	_, err = jsonschema.AnyToSchema(reflect.TypeOf(map[string]complex64{}))
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	_, err = jsonschema.AnyToSchema(reflect.TypeOf([]complex64{}))
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	//nolint:tagliatelle
 	_, err = jsonschema.AnyToSchema(reflect.TypeOf(struct {

@@ -22,7 +22,7 @@ func CompareSemVer(a string, b string) (int, error) {
 		return 0, errInvalidSemVer
 	}
 
-	for semVerIdx := 0; semVerIdx < 3; semVerIdx++ {
+	for semVerIdx := range 3 {
 		first, err := strconv.Atoi(aSplit[semVerIdx])
 		if err != nil {
 			return 0, errInvalidSemVer

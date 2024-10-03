@@ -123,7 +123,7 @@ func convertType(value reflect.Type) (*JSONSchema, error) { //nolint:funlen,goco
 		} else {
 			schema.Type = "object"
 
-			for i := 0; i < value.NumField(); i++ {
+			for i := range value.NumField() {
 				field := value.Field(i)
 				if !field.IsExported() {
 					continue
@@ -203,7 +203,7 @@ func RequestBodyToSchema(value reflect.Type) (*JSONSchema, error) { //nolint:fun
 	schema.Title = value.Name()
 	schema.Type = "object"
 
-	for i := 0; i < value.NumField(); i++ {
+	for i := range value.NumField() {
 		field := value.Field(i)
 		if !field.IsExported() {
 			continue
@@ -262,7 +262,7 @@ func RequestBodyToSchema(value reflect.Type) (*JSONSchema, error) { //nolint:fun
 func ParametersToSchema(value reflect.Type, defaultToQuery bool) ([]OpenAPIParameter, error) { //nolint:cyclop
 	params := []OpenAPIParameter{}
 
-	for i := 0; i < value.NumField(); i++ {
+	for i := range value.NumField() {
 		field := value.Field(i)
 		if !field.IsExported() {
 			continue

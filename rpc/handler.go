@@ -24,12 +24,12 @@ func isRPCHandler(handler any) (reflect.Type, reflect.Type, bool) {
 		return nil, nil, false
 	}
 
-	//nolint:gomnd
+	//nolint:mnd
 	if handlerFnType.NumIn() != 2 {
 		return nil, nil, false
 	}
 
-	//nolint:gomnd
+	//nolint:mnd
 	if handlerFnType.NumOut() != 2 {
 		return nil, nil, false
 	}
@@ -69,7 +69,7 @@ var errInvalidTag = errors.New("invalid in tag")
 func getInputFieldAttrs(inputType reflect.Type, hasBody bool) (map[string]inputFieldAttrs, error) { //nolint:cyclop
 	inputFieldAttrsMap := map[string]inputFieldAttrs{}
 
-	for i := 0; i < inputType.NumField(); i++ {
+	for i := range inputType.NumField() {
 		field := inputType.Field(i)
 		if !field.IsExported() {
 			continue

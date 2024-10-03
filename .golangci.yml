@@ -9,6 +9,7 @@ linters:
     - interfacer
     - maligned
     - nosnakecase
+    - gomnd
     - scopelint
     - structcheck
     - varcheck

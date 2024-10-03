@@ -16,7 +16,7 @@ func (c Context) WithLog(logger *log.Logger) Context {
 }
 
 func (c Context) GetLog() *log.Logger {
-	return ValueDefault[*log.Logger](c, loggerContextKey, log.Default())
+	return ValueDefault(c, loggerContextKey, log.Default())
 }
 
 func (c Context) Trace(msg any, args ...attr.Attr) {
@@ -108,7 +108,7 @@ func trimCallerPath(path string, numTrim int) string {
 		return path
 	}
 
-	for i := 0; i < numTrim-1; i++ {
+	for range numTrim - 1 {
 		idx = strings.LastIndexByte(path[:idx], '/')
 		if idx == -1 {
 			return path
@@ -121,7 +121,7 @@ func trimCallerPath(path string, numTrim int) string {
 func (e *CallerError) Error() string {
 	fs := runtime.CallersFrames([]uintptr{e.pc})
 	f, _ := fs.Next()
-	//nolint:gomnd
+	//nolint:mnd
 	return fmt.Sprintf("<%s:%d>{%s}", trimCallerPath(f.File, 2), f.Line, e.error.Error())
 }
 
@@ -132,7 +132,7 @@ func (e *CallerError) Unwrap() error {
 func newWithStack(err error) error {
 	var pcs [1]uintptr
 
-	//nolint:gomnd
+	//nolint:mnd
 	runtime.Callers(3, pcs[:])
 
 	return &CallerError{
