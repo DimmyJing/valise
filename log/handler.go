@@ -11,6 +11,8 @@ import (
 	"github.com/charmbracelet/log"
 )
 
+// TODO: Add opentelemetry logging support
+
 type Handler struct {
 	writer      io.Writer
 	useCharm    bool
