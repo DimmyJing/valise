@@ -6,8 +6,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/DimmyJing/valise/ctx"
 	"github.com/DimmyJing/valise/rpc"
+	"github.com/DimmyJing/valise/vctx"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/stretchr/testify/assert"
@@ -22,7 +22,7 @@ type testOutput1 struct {
 	Name string
 }
 
-func HandlerTest1(inp testInput1, ctx ctx.Context) (testOutput1, error) {
+func HandlerTest1(inp testInput1, ctx vctx.Context) (testOutput1, error) {
 	return testOutput1(inp), nil
 }
 

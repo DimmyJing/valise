@@ -11,8 +11,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/DimmyJing/valise/ctx"
 	"github.com/DimmyJing/valise/jsonschema"
+	"github.com/DimmyJing/valise/vctx"
 	"github.com/labstack/echo/v4"
 )
 
@@ -49,7 +49,7 @@ func isRPCHandler(handler any) (reflect.Type, reflect.Type, bool) {
 		return nil, nil, false
 	}
 
-	if handlerFnType.In(1) != reflect.TypeOf(ctx.FromBackground()) {
+	if handlerFnType.In(1) != reflect.TypeOf(vctx.FromBackground()) {
 		return nil, nil, false
 	}
 
@@ -124,7 +124,7 @@ func parseInput( //nolint:funlen,gocognit,cyclop
 	hasBody bool,
 	requestContentType string,
 	echoCtx echo.Context,
-	ctx ctx.Context,
+	ctx vctx.Context,
 	inputType reflect.Type,
 ) (reflect.Value, error) {
 	inputValue := reflect.New(inputType).Elem()
@@ -214,8 +214,8 @@ func createRPCHandler( //nolint:funlen,cyclop,gocognit
 	inputType reflect.Type,
 	requestContentType string,
 	responseContentType string,
-	preHandlerHook func(ctx.Context, any) ctx.Context,
-	postHandlerHook func(ctx.Context, any, any),
+	preHandlerHook func(vctx.Context, any) vctx.Context,
+	postHandlerHook func(vctx.Context, any, any),
 ) (echo.HandlerFunc, error) {
 	hasBody := slices.Contains(hasBodyMethods, method)
 

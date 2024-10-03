@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/DimmyJing/valise/attr"
-	"github.com/DimmyJing/valise/ctx"
 	"github.com/DimmyJing/valise/log"
+	"github.com/DimmyJing/valise/vctx"
 	"github.com/labstack/echo/v4"
 	"go.opentelemetry.io/otel"
 	otellog "go.opentelemetry.io/otel/log"
@@ -22,7 +22,7 @@ import (
 
 type Context struct {
 	echo.Context
-	ctx ctx.Context
+	ctx vctx.Context
 }
 
 var _ echo.Context = (*Context)(nil)
@@ -33,25 +33,25 @@ func FromEchoContext(echoCtx echo.Context) Context {
 	}
 
 	reqCtx := echoCtx.Request().Context()
-	if ctx, ok := reqCtx.(ctx.Context); ok {
+	if ctx, ok := reqCtx.(vctx.Context); ok {
 		return Context{echoCtx, ctx}
 	}
 
-	return Context{echoCtx, ctx.From(reqCtx).WithEcho(echoCtx)}
+	return Context{echoCtx, vctx.From(reqCtx).WithEcho(echoCtx)}
 }
 
-func (c Context) Ctx() ctx.Context {
+func (c Context) Ctx() vctx.Context {
 	return c.ctx
 }
 
-func (c Context) WithCtx(ctx ctx.Context) Context {
+func (c Context) WithCtx(ctx vctx.Context) Context {
 	c.SetRequest(c.Request().WithContext(ctx))
 	c.ctx = ctx
 
 	return c
 }
 
-type Handler func(ctx ctx.Context) error
+type Handler func(ctx vctx.Context) error
 
 var errHandlerPanic = errors.New("handler panic")
 
@@ -114,7 +114,7 @@ func OTelMiddleware(skipPaths []string) echo.MiddlewareFunc {
 			}
 
 			carrier := propagation.HeaderCarrier(echoCtx.Request().Header)
-			cctx = ctx.From(otel.GetTextMapPropagator().Extract(cctx, carrier))
+			cctx = vctx.From(otel.GetTextMapPropagator().Extract(cctx, carrier))
 
 			spanCtx, rootSpan := cctx.OTelTracer().Start(
 				cctx,
@@ -134,7 +134,7 @@ func OTelMiddleware(skipPaths []string) echo.MiddlewareFunc {
 			)
 			defer rootSpan.End()
 
-			cctx = ctx.From(spanCtx)
+			cctx = vctx.From(spanCtx)
 
 			err := next(intEchoCtx.WithCtx(cctx))
 
@@ -187,7 +187,7 @@ func RecoverMiddleware() echo.MiddlewareFunc {
 					cctx.Error(err.Error(), stackAttr)
 					// this means that ctx.Fail is not called on the error, so we call it here
 					//nolint:errorlint
-					if _, ok := err.(*ctx.CallerError); !ok {
+					if _, ok := err.(*vctx.CallerError); !ok {
 						_ = cctx.Fail(err, stackAttr)
 					}
 				}
@@ -199,7 +199,7 @@ func RecoverMiddleware() echo.MiddlewareFunc {
 
 				// this means that ctx.Fail is not called on the error, so we call it here
 				//nolint:errorlint
-				if _, ok := err.(*ctx.CallerError); !ok {
+				if _, ok := err.(*vctx.CallerError); !ok {
 					_ = cctx.Fail(err)
 				}
 
@@ -215,8 +215,8 @@ func RecoverMiddleware() echo.MiddlewareFunc {
 
 const UserIDContextKey = "userID"
 
-func UserID(cctx ctx.Context) string {
-	return ctx.MustValue[string](cctx, UserIDContextKey)
+func UserID(cctx vctx.Context) string {
+	return vctx.MustValue[string](cctx, UserIDContextKey)
 }
 
 var (
@@ -224,9 +224,9 @@ var (
 	errInvalidToken = errors.New("invalid bearer token")
 )
 
-type TokenVerifier func(ctx.Context, string) (string, error)
+type TokenVerifier func(vctx.Context, string) (string, error)
 
-func handleAuth(ctx ctx.Context, auth string, tokenVerifier TokenVerifier, development bool) (string, error) {
+func handleAuth(ctx vctx.Context, auth string, tokenVerifier TokenVerifier, development bool) (string, error) {
 	parts := strings.Split(auth, " ")
 	if len(parts) != 2 || parts[0] != "Bearer" {
 		return "", ctx.Fail(echo.NewHTTPError(

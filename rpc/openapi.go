@@ -11,8 +11,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/DimmyJing/valise/ctx"
 	"github.com/DimmyJing/valise/jsonschema"
+	"github.com/DimmyJing/valise/vctx"
 	"github.com/labstack/echo/v4"
 	orderedmap "github.com/wk8/go-ordered-map/v2"
 )
@@ -55,8 +55,8 @@ type openAPIResponse struct {
 type OpenAPI struct {
 	document        *openAPIObject
 	pathMap         *orderedmap.OrderedMap[string, openAPIOperation]
-	preHandlerHook  func(ctx.Context, any) ctx.Context
-	postHandlerHook func(ctx.Context, any, any)
+	preHandlerHook  func(vctx.Context, any) vctx.Context
+	postHandlerHook func(vctx.Context, any, any)
 }
 
 func New(
@@ -87,11 +87,11 @@ func New(
 	}
 }
 
-func (o *OpenAPI) RegisterPreHandlerHook(hook func(ctx.Context, any) ctx.Context) {
+func (o *OpenAPI) RegisterPreHandlerHook(hook func(vctx.Context, any) vctx.Context) {
 	o.preHandlerHook = hook
 }
 
-func (o *OpenAPI) RegisterPostHandlerHook(hook func(ctx.Context, any, any)) {
+func (o *OpenAPI) RegisterPostHandlerHook(hook func(vctx.Context, any, any)) {
 	o.postHandlerHook = hook
 }
 
