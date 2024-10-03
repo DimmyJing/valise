@@ -3,6 +3,7 @@ package log
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/DimmyJing/valise/attr"
 )
@@ -16,6 +17,7 @@ func Default() *Logger {
 
 func SetDefault(l *Logger) {
 	logger = l
+	slog.SetDefault(l.logger)
 }
 
 func With(args ...attr.Attr) *Logger {
