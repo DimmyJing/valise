@@ -9,11 +9,6 @@ service.
 
 Wrapper that tries to unify between `slog.Attr/slog.Value` and opentelemetry `attribute.KeyValue/attribute.Value`.
 
-### env
-
-Utility that allows for storing and loading environment variables using an AES key
-and a JSON file.
-
 ### jsonschema
 
 Utility that converts `reflect.Type` to a JSON schema.
