@@ -103,13 +103,13 @@ func InitMiddleware(tracer trace.Tracer, meter metric.Meter, logger otellog.Logg
 	})
 }
 
-func OTelMiddleware(skipPaths []string) echo.MiddlewareFunc {
+func OTelMiddleware(skipper func(echo.Context) bool) echo.MiddlewareFunc {
 	return echo.MiddlewareFunc(func(next echo.HandlerFunc) echo.HandlerFunc {
 		return echo.HandlerFunc(func(echoCtx echo.Context) error {
 			intEchoCtx := FromEchoContext(echoCtx)
 			cctx := intEchoCtx.ctx
 
-			if slices.Contains(skipPaths, echoCtx.Path()) || cctx.OTelTracer() == nil {
+			if skipper(echoCtx) || cctx.OTelTracer() == nil {
 				return next(intEchoCtx)
 			}
 
