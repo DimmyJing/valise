@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"runtime/debug"
-	"slices"
 	"strings"
 
 	"github.com/DimmyJing/valise/attr"

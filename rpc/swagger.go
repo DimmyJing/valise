@@ -24,7 +24,7 @@ func ServeSwaggerUI(ech *echo.Echo, title string, spec []byte, userID string) {
 <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
 <script>
     var swaggerUIOptions = {
-      url: "/swagger.json",
+      url: "/swagger/swagger.json",
       dom_id: '#ui-wrapper-new', // Determine what element to load swagger ui
       docExpansion: 'list',
       deepLinking: true, // Enables dynamic deep linking for tags and operations
@@ -51,10 +51,10 @@ func ServeSwaggerUI(ech *echo.Echo, title string, spec []byte, userID string) {
 
 </html>`
 
-	ech.GET("/", func(c echo.Context) error {
+	ech.GET("/swagger/", func(c echo.Context) error {
 		return c.HTML(http.StatusOK, swaggerHTML)
 	})
-	ech.GET("/swagger.json", func(c echo.Context) error {
+	ech.GET("/swagger/swagger.json", func(c echo.Context) error {
 		return c.JSONBlob(http.StatusOK, spec)
 	})
 }
