@@ -281,11 +281,14 @@ func createRPCHandler( //nolint:funlen,cyclop,gocognit
 			))
 		}
 
+		//nolint:nestif
 		if responseContentType == echo.MIMEApplicationJSON {
 			err := echoCtx.JSON(http.StatusOK, outRes)
 			if err != nil {
 				return ctx.Fail(NewInternalHTTPError(http.StatusInternalServerError, fmt.Errorf("error writing response: %w", err)))
 			}
+		} else if responseContentType == "text/event-stream" {
+			return nil
 		} else if bytes, ok := outRes.([]byte); ok {
 			err := echoCtx.Blob(http.StatusOK, responseContentType, bytes)
 			if err != nil {
