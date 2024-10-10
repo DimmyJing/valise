@@ -168,7 +168,7 @@ func LogMiddleware() echo.MiddlewareFunc {
 	})
 }
 
-func RecoverMiddleware() echo.MiddlewareFunc {
+func RecoverMiddleware(logSkipper func(echo.Context) bool) echo.MiddlewareFunc {
 	return echo.MiddlewareFunc(func(next echo.HandlerFunc) echo.HandlerFunc {
 		return echo.HandlerFunc(func(echoCtx echo.Context) error {
 			intEchoCtx := FromEchoContext(echoCtx)
@@ -204,7 +204,9 @@ func RecoverMiddleware() echo.MiddlewareFunc {
 
 				return err
 			} else {
-				cctx.GetLog().Info("ok")
+				if !logSkipper(echoCtx) {
+					cctx.GetLog().Info("ok")
+				}
 			}
 
 			return nil
