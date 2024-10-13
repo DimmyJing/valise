@@ -10,6 +10,10 @@ import (
 )
 
 func ValueToAny(value reflect.Value) (any, error) { //nolint:cyclop,funlen,gocognit,gocyclo
+	if !value.MethodByName("MarshalJSON").IsZero() {
+		return value.Interface(), nil
+	}
+
 	//nolint:exhaustive
 	switch value.Type().Kind() {
 	case reflect.Bool:
