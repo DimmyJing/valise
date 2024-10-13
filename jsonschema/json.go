@@ -10,7 +10,7 @@ import (
 )
 
 func ValueToAny(value reflect.Value) (any, error) { //nolint:cyclop,funlen,gocognit,gocyclo
-	if !value.MethodByName("MarshalJSON").IsZero() {
+	if value.MethodByName("MarshalJSON").IsValid() {
 		return value.Interface(), nil
 	}
 

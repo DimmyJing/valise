@@ -1,6 +1,7 @@
 package jsonschema_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"testing"
@@ -36,6 +37,7 @@ func TestValueToAny(t *testing.T) { //nolint:funlen
 		TestName         string `json:"testCustomName"`
 		TestOptional     string `json:",omitempty"`
 		TestOptional2    string `json:",omitempty"`
+		TestJSONRaw      json.RawMessage
 		testNotExported  string
 	}
 
@@ -61,13 +63,14 @@ func TestValueToAny(t *testing.T) { //nolint:funlen
 		TestName:        "test",
 		TestOptional:    "test",
 		TestOptional2:   "",
+		TestJSONRaw:     json.RawMessage(`{"test": "test"}`),
 		testNotExported: "test",
 	}
 
 	res, err := jsonschema.ValueToAny(reflect.ValueOf(input))
 	resMap := res.(map[string]any)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, true, resMap["testBool"])
 	assert.Equal(t, int64(1), resMap["testInt"])
 	assert.Equal(t, uint64(2), resMap["testUint"])
@@ -93,6 +96,8 @@ func TestValueToAny(t *testing.T) { //nolint:funlen
 	assert.Equal(t, "test", resMap["testOptional"])
 	assert.Nil(t, resMap["testNotExported"])
 	assert.Nil(t, resMap["testOptional2"])
+	_, ok := resMap["testJSONRaw"].(json.RawMessage)
+	assert.True(t, ok)
 }
 
 func TestValueToAnyError(t *testing.T) {
