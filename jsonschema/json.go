@@ -1,6 +1,7 @@
 package jsonschema
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"slices"
@@ -10,7 +11,7 @@ import (
 )
 
 func ValueToAny(value reflect.Value) (any, error) { //nolint:cyclop,funlen,gocognit,gocyclo
-	if value.MethodByName("MarshalJSON").IsValid() {
+	if value.Type().Implements(reflect.TypeOf((*json.Marshaler)(nil)).Elem()) {
 		return value.Interface(), nil
 	}
 

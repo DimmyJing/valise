@@ -12,33 +12,44 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type customMarshaller struct {
+	Value string
+}
+
+func (c customMarshaller) MarshalJSON() ([]byte, error) {
+	return []byte("custom" + c.Value + "custom"), nil
+}
+
+var _ json.Marshaler = customMarshaller{Value: ""}
+
 //nolint:forcetypeassert
 func TestValueToAny(t *testing.T) { //nolint:funlen
 	t.Parallel()
 
 	//nolint:tagliatelle
 	type testVal struct {
-		TestBool         bool
-		TestInt          int
-		TestUint         uint
-		TestFloat        float64
-		TestArray        [8]int
-		TestInterface    any
-		TestNilInterface any
-		TestPtrInterface any
-		TestMap          map[string]int
-		TestPtr          *string
-		TestNilPtr       *string
-		TestSlice        []int
-		TestString       string
-		TestBytes        []byte
-		TestTime         time.Time
-		TestIgnore       string `json:"-"`
-		TestName         string `json:"testCustomName"`
-		TestOptional     string `json:",omitempty"`
-		TestOptional2    string `json:",omitempty"`
-		TestJSONRaw      json.RawMessage
-		testNotExported  string
+		TestBool          bool
+		TestInt           int
+		TestUint          uint
+		TestFloat         float64
+		TestArray         [8]int
+		TestInterface     any
+		TestNilInterface  any
+		TestPtrInterface  any
+		TestMap           map[string]int
+		TestPtr           *string
+		TestNilPtr        *string
+		TestSlice         []int
+		TestString        string
+		TestBytes         []byte
+		TestTime          time.Time
+		TestIgnore        string `json:"-"`
+		TestName          string `json:"testCustomName"`
+		TestOptional      string `json:",omitempty"`
+		TestOptional2     string `json:",omitempty"`
+		TestJSONRaw       json.RawMessage
+		TestCustomMarshal customMarshaller
+		testNotExported   string
 	}
 
 	input := testVal{
@@ -53,17 +64,20 @@ func TestValueToAny(t *testing.T) { //nolint:funlen
 		TestMap: map[string]int{
 			"test": 1,
 		},
-		TestPtr:         &[]string{"hello"}[0],
-		TestNilPtr:      nil,
-		TestSlice:       []int{1, 2, 3, 4, 5, 6, 7, 8},
-		TestString:      "test",
-		TestBytes:       []byte("test"),
-		TestTime:        time.Unix(1, 1).UTC(),
-		TestIgnore:      "test",
-		TestName:        "test",
-		TestOptional:    "test",
-		TestOptional2:   "",
-		TestJSONRaw:     json.RawMessage(`{"test": "test"}`),
+		TestPtr:       &[]string{"hello"}[0],
+		TestNilPtr:    nil,
+		TestSlice:     []int{1, 2, 3, 4, 5, 6, 7, 8},
+		TestString:    "test",
+		TestBytes:     []byte("test"),
+		TestTime:      time.Unix(1, 1).UTC(),
+		TestIgnore:    "test",
+		TestName:      "test",
+		TestOptional:  "test",
+		TestOptional2: "",
+		TestJSONRaw:   json.RawMessage(`{"test": "test"}`),
+		TestCustomMarshal: customMarshaller{
+			Value: "test",
+		},
 		testNotExported: "test",
 	}
 
@@ -96,8 +110,11 @@ func TestValueToAny(t *testing.T) { //nolint:funlen
 	assert.Equal(t, "test", resMap["testOptional"])
 	assert.Nil(t, resMap["testNotExported"])
 	assert.Nil(t, resMap["testOptional2"])
-	_, ok := resMap["testJSONRaw"].(json.RawMessage)
+	msg, ok := resMap["testJSONRaw"].(json.RawMessage)
 	assert.True(t, ok)
+	//nolint:testifylint
+	assert.Equal(t, json.RawMessage(`{"test": "test"}`), msg)
+	assert.Equal(t, customMarshaller{Value: "test"}, resMap["testCustomMarshal"])
 }
 
 func TestValueToAnyError(t *testing.T) {
